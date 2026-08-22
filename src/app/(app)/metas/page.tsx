@@ -49,6 +49,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { mes?
                   </p>
                   <NotaAtendimento
                     score={store.npsScore}
+                    respostas={store.npsResponses}
                     sufixo={store.npsCalculado ? "média das vendedoras do mês" : undefined}
                   />
                 </div>

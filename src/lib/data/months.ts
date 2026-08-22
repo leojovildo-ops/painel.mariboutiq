@@ -33,6 +33,8 @@ export interface SellerRow {
   note: string | null;
   /** Nota de atendimento do mês, de 0 a 10. */
   npsScore: number | null;
+  /** Quantas respostas da pesquisa geraram a nota. */
+  npsResponses: number | null;
   editedAt: Date | null;
   level: LevelProgress;
   position: number;
@@ -52,6 +54,7 @@ export interface StoreRow {
   npsScore: number | null;
   /** true quando a nota veio da média das vendedoras, e não digitada à mão. */
   npsCalculado: boolean;
+  npsResponses: number | null;
 }
 
 export function periodSlug(year: number, month: number): string {
@@ -98,6 +101,7 @@ export async function getSellerRanking(periodId: string): Promise<SellerRow[]> {
         projection: toNumber(s.projection),
         note: s.note,
         npsScore: toNumber(s.npsScore),
+        npsResponses: s.npsResponses,
         editedAt: s.editedAt,
         level: computeLevel(
           revenue,
@@ -144,7 +148,8 @@ export async function getStoreMonth(periodId: string): Promise<StoreRow | null> 
       stats.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
     ),
     npsScore,
-    npsCalculado
+    npsCalculado,
+    npsResponses: stats.npsResponses
   };
 }
 

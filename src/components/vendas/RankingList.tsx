@@ -76,7 +76,7 @@ export function RankingList({
                       projeção <span className="font-semibold text-creme-300">{money(row.projection)}</span>
                     </p>
                   )}
-                  <NotaAtendimento score={row.npsScore} />
+                  <NotaAtendimento score={row.npsScore} respostas={row.npsResponses} />
                 </div>
               </div>
 

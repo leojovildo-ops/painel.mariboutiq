@@ -5,6 +5,7 @@ import { listPeriods, resolvePeriod } from "@/lib/data/months";
 import { periodLabel } from "@/lib/format";
 import { UploadCard } from "@/components/admin/UploadCard";
 import { UploadDespesasCard } from "@/components/admin/UploadDespesasCard";
+import { UploadPesquisaCard } from "@/components/admin/UploadPesquisaCard";
 import { EditStatsCard } from "@/components/admin/EditStatsCard";
 import { UsersCard } from "@/components/admin/UsersCard";
 import { MonthSelector } from "@/components/ui/MonthSelector";
@@ -40,6 +41,8 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
       </header>
 
       <UploadCard />
+
+      <UploadPesquisaCard />
 
       {admin.canViewFinance && <UploadDespesasCard />}
 
