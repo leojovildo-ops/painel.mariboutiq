@@ -26,6 +26,8 @@ export interface SellerRow {
   tkm: number | null;
   salao: number | null;
   online: number | null;
+  /** Projeção de fechamento do mês (linha "Projeção" da aba da vendedora). */
+  projection: number | null;
   editedAt: Date | null;
   level: LevelProgress;
   position: number;
@@ -84,6 +86,7 @@ export async function getSellerRanking(periodId: string): Promise<SellerRow[]> {
         tkm: toNumber(s.tkm),
         salao: toNumber(s.salao),
         online: toNumber(s.online),
+        projection: toNumber(s.projection),
         editedAt: s.editedAt,
         level: computeLevel(
           revenue,

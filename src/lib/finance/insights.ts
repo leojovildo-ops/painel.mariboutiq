@@ -200,3 +200,119 @@ export function agrupar(obs: Observacao[]): Record<Tom, Observacao[]> {
     NEGATIVO: obs.filter((o) => o.tom === "NEGATIVO")
   };
 }
+
+/**
+ * Leitura do ano inteiro. Só considera meses fechados nas comparações — o mês
+ * corrente é parcial e distorceria média, melhor e pior mês.
+ */
+export function gerarObservacoesAno(meses: MesFinanceiro[]): Observacao[] {
+  const obs: Observacao[] = [];
+  const fechados = meses.filter((m) => !m.emAndamento);
+  const comMargem = fechados.filter((m) => m.margin != null);
+
+  const faturamento = meses.reduce((acc, m) => acc + (m.revenue ?? 0), 0);
+  const despesas = meses.reduce((acc, m) => acc + m.expenses, 0);
+  const lucro = faturamento - despesas;
+  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : null;
+
+  // ---- Resultado acumulado --------------------------------------------------
+  if (margem != null) {
+    if (lucro < 0) {
+      obs.push({
+        tom: "NEGATIVO",
+        titulo: `Ano acumula prejuízo de ${brl(lucro)}`,
+        texto: `${brl(despesas)} de despesas contra ${brl(faturamento)} de faturamento.`
+      });
+    } else if (margem >= META_MARGEM) {
+      obs.push({
+        tom: "POSITIVO",
+        titulo: `Margem do ano em ${pct(margem)}, acima da meta de ${pct(META_MARGEM)}`,
+        texto: `${brl(lucro)} de resultado acumulado.`
+      });
+    } else {
+      obs.push({
+        tom: "ATENCAO",
+        titulo: `Margem do ano em ${pct(margem)}, abaixo da meta de ${pct(META_MARGEM)}`,
+        texto: `${brl(lucro)} acumulados. Na meta, o ano teria rendido ${brl(faturamento * (META_MARGEM / 100))} até aqui.`
+      });
+    }
+  }
+
+  // ---- Meses no vermelho ----------------------------------------------------
+  const vermelhos = comMargem.filter((m) => (m.profit ?? 0) < 0);
+  if (vermelhos.length > 0) {
+    obs.push({
+      tom: vermelhos.length >= 3 ? "NEGATIVO" : "ATENCAO",
+      titulo: `${vermelhos.length} ${vermelhos.length === 1 ? "mês fechou" : "meses fecharam"} no vermelho`,
+      texto: `${vermelhos.map((m) => MES_CURTO[m.month - 1]).join(", ")} — somando ${brl(
+        vermelhos.reduce((acc, m) => acc + (m.profit ?? 0), 0)
+      )}.`
+    });
+  }
+
+  // ---- Melhor e pior mês ----------------------------------------------------
+  if (comMargem.length >= 2) {
+    const ordenados = [...comMargem].sort((a, b) => (b.margin ?? 0) - (a.margin ?? 0));
+    const melhor = ordenados[0];
+    const pior = ordenados[ordenados.length - 1];
+    obs.push({
+      tom: "POSITIVO",
+      titulo: `Melhor mês: ${MES_LONGO[melhor.month - 1]}, com ${pct(melhor.margin ?? 0)} de margem`,
+      texto: `${brl(melhor.revenue ?? 0)} de faturamento e ${brl(melhor.profit ?? 0)} de resultado.`
+    });
+    if (pior.month !== melhor.month && (pior.profit ?? 0) >= 0) {
+      obs.push({
+        tom: "ATENCAO",
+        titulo: `Pior mês: ${MES_LONGO[pior.month - 1]}, com ${pct(pior.margin ?? 0)} de margem`,
+        texto: `${brl(pior.revenue ?? 0)} de faturamento e ${brl(pior.profit ?? 0)} de resultado.`
+      });
+    }
+  }
+
+  // ---- Grupo que mais consome o faturamento do ano --------------------------
+  const porGrupo = new Map<string, number>();
+  for (const m of meses) for (const g of m.groups) porGrupo.set(g.group, (porGrupo.get(g.group) ?? 0) + g.total);
+  const maior = Array.from(porGrupo.entries()).sort((a, b) => b[1] - a[1])[0];
+  if (maior && faturamento > 0) {
+    const sobre = (maior[1] / faturamento) * 100;
+    obs.push({
+      tom: sobre >= 45 ? "ATENCAO" : "POSITIVO",
+      titulo: `${maior[0]} consome ${pct(sobre)} do faturamento do ano`,
+      texto: `${brl(maior[1])} de um total de ${brl(despesas)} em despesas.`
+    });
+  }
+
+  // ---- Tendência: últimos três meses fechados contra os três anteriores -----
+  if (comMargem.length >= 6) {
+    const ultimos = comMargem.slice(-3);
+    const anteriores = comMargem.slice(-6, -3);
+    const mediaU = ultimos.reduce((acc, m) => acc + (m.revenue ?? 0), 0) / 3;
+    const mediaA = anteriores.reduce((acc, m) => acc + (m.revenue ?? 0), 0) / 3;
+    const v = variacao(mediaU, mediaA);
+    if (v != null && Math.abs(v) >= VARIACAO_RELEVANTE) {
+      obs.push({
+        tom: v > 0 ? "POSITIVO" : "ATENCAO",
+        titulo: `Faturamento ${v > 0 ? "em alta" : "em queda"}: ${pct(Math.abs(v))} no trimestre`,
+        texto: `Média dos três últimos meses fechados: ${brl(mediaU)}, contra ${brl(mediaA)} nos três anteriores.`
+      });
+    }
+  }
+
+  // ---- Meses sem faturamento informado --------------------------------------
+  const semReceita = meses.filter((m) => m.revenue == null);
+  if (semReceita.length > 0) {
+    obs.push({
+      tom: "ATENCAO",
+      titulo: `${semReceita.length} mês(es) sem faturamento informado`,
+      texto: `${semReceita.map((m) => MES_CURTO[m.month - 1]).join(", ")} entram só com despesa, o que puxa o resultado do ano para baixo.`
+    });
+  }
+
+  return obs;
+}
+
+const MES_CURTO = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const MES_LONGO = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];

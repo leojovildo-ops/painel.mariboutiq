@@ -64,9 +64,18 @@ export function RankingList({
                     </span>
                   )}
                 </div>
-                <p className="num mt-0.5 font-display text-xl font-bold text-coral-300 sm:text-2xl">
-                  {money(row.revenue)}
-                </p>
+                {/* Total vendido e projecao lado a lado: o primeiro diz onde
+                    ela esta, o segundo onde o mes deve terminar no ritmo atual. */}
+                <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                  <p className="num font-display text-xl font-bold text-coral-300 sm:text-2xl">
+                    {money(row.revenue)}
+                  </p>
+                  {row.projection != null && (
+                    <p className="num text-sm text-creme-500">
+                      projeção <span className="font-semibold text-creme-300">{money(row.projection)}</span>
+                    </p>
+                  )}
+                </div>
               </div>
 
               <LevelBadge level={row.level.current} size="sm" />

@@ -18,7 +18,10 @@ const VENDAS: NavItem[] = [
   { href: "/admin", label: "Administração", adminOnly: true }
 ];
 
-const FINANCEIRO: NavItem[] = [{ href: "/financeiro", label: "Dashboard" }];
+const FINANCEIRO: NavItem[] = [
+  { href: "/financeiro", label: "Dashboard do mês" },
+  { href: "/financeiro/ano", label: "Resultado do ano" }
+];
 
 /** Módulo que ainda não existe; fica visível para marcar o lugar dele. */
 const EM_BREVE = ["Estoque"];
@@ -69,7 +72,7 @@ export function Nav({
           <p className="label mb-2 px-3">Financeiro</p>
           <ul className="space-y-1">
             {FINANCEIRO.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active = pathname === item.href;
               return (
                 <li key={item.href}>
                   <Link
