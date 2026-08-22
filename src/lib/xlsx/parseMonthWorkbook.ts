@@ -89,9 +89,14 @@ export function normalize(value: string): string {
 /** Abas de modelo/rascunho: "LOJA", "VEND", "VEND 1", "vend 2"... */
 export function isTemplateSheet(name: string): boolean {
   const n = normalize(name);
-  // "RAFAELA TESTE" e parecidas são abas de rascunho e virariam uma vendedora
-  // fantasma no ranking se entrassem.
-  return n === "LOJA" || /^VEND(EDORA)?S?\.?( ?\d+)?$/.test(n) || /\bTESTE?\b/.test(n);
+  // "RAFAELA TESTE", "Planilha1" e parecidas são abas de rascunho ou a aba
+  // padrão vazia do Excel: virariam uma vendedora fantasma no ranking.
+  return (
+    n === "LOJA" ||
+    /^VEND(EDORA)?S?\.?( ?\d+)?$/.test(n) ||
+    /\bTESTE?\b/.test(n) ||
+    /^(PLANILHA|PLAN|SHEET|FOLHA)\s*\d*$/.test(n)
+  );
 }
 
 export function isStoreSheet(name: string): boolean {
