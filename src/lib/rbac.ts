@@ -14,7 +14,8 @@ export interface SessionUser {
 /** Exige sessão em páginas do app; sem sessão, volta para o login. */
 export async function requireUser(): Promise<SessionUser> {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  // `id` vazio = sessão de alguém desativado (ver o callback jwt).
+  if (!session?.user?.id) redirect("/login");
   return session.user as SessionUser;
 }
 
@@ -39,5 +40,6 @@ export async function requireFinance(): Promise<SessionUser> {
 /** Versão para rotas de API: devolve null em vez de redirecionar. */
 export async function apiUser(): Promise<SessionUser | null> {
   const session = await auth();
-  return (session?.user as SessionUser) ?? null;
+  if (!session?.user?.id) return null;
+  return session.user as SessionUser;
 }

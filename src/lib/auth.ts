@@ -50,6 +50,34 @@ export const authOptions: AuthOptions = {
         token.role = user.role;
         token.sellerId = user.sellerId;
         token.canViewFinance = user.canViewFinance;
+        return token;
+      }
+
+      // Sessões duram 30 dias, e o token guarda perfil e permissões do momento
+      // do login. Sem reler do banco, dar ou tirar um acesso (o financeiro, por
+      // exemplo) só valeria no próximo login — e desativar alguém não a
+      // desconectaria. Por isso os dados são atualizados a cada requisição.
+      if (!token.id) return token;
+      try {
+        const atual = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { role: true, active: true, sellerId: true, canViewFinance: true }
+        });
+
+        if (!atual || !atual.active) {
+          // Acesso desativado: o token perde a identidade e as telas mandam
+          // a pessoa de volta para o login.
+          token.id = "";
+          return token;
+        }
+
+        token.role = atual.role;
+        token.sellerId = atual.sellerId;
+        token.canViewFinance = atual.canViewFinance;
+      } catch (error) {
+        // Falha de banco não pode derrubar quem já está logado: mantém o token
+        // como está e deixa a página lidar com o erro.
+        console.error("[auth] falha ao atualizar a sessão:", error);
       }
       return token;
     },
