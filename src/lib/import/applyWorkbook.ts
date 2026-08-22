@@ -16,7 +16,7 @@ function displayName(sheetName: string): string {
  * são a mesma pessoa, e o mês dela é a soma dos dois — senão ela apareceria
  * duas vezes no ranking, cada uma com metade do que vendeu.
  */
-function combinarAbas(abas: ParsedSheet[]): { sheet: ParsedSheet; note: string } {
+export function combinarAbas(abas: ParsedSheet[]): { sheet: ParsedSheet; note: string } {
   const oficial = abas.find((a) => !a.isTrial) ?? abas[0];
   const soma = (pick: (s: ParsedSheet) => number | null) =>
     abas.reduce<number>((acc, s) => acc + (pick(s) ?? 0), 0);
