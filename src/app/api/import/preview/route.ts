@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiUser } from "@/lib/rbac";
 import { forbidden, handleError, jsonError, unauthorized } from "@/lib/apiError";
 import { parseMonthWorkbook } from "@/lib/xlsx/parseMonthWorkbook";
+import { avisosDeNomesParecidos } from "@/lib/import/nomesParecidos";
 
 export const runtime = "nodejs";
 
@@ -29,6 +30,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // Erro de digitação no nome da aba criaria uma vendedora duplicada.
+    const vendedoras = await prisma.seller.findMany({ select: { sheetName: true } });
+    const avisos = [
+      ...parsed.warnings,
+      ...avisosDeNomesParecidos(
+        parsed.sellers.map((s) => s.sheetName),
+        vendedoras.map((v) => v.sheetName)
+      )
+    ];
+
     const existing =
       parsed.year && parsed.month
         ? await prisma.period.findUnique({
@@ -43,7 +54,7 @@ export async function POST(request: Request) {
         preview: parsed as unknown as object,
         sheetsFound: parsed.sellers.length + (parsed.store ? 1 : 0),
         sheetsIgnored: parsed.ignoredSheets,
-        warnings: parsed.warnings,
+        warnings: avisos,
         importedById: user.id
       }
     });
@@ -56,7 +67,7 @@ export async function POST(request: Request) {
       store: parsed.store,
       sellers: parsed.sellers,
       ignoredSheets: parsed.ignoredSheets,
-      warnings: parsed.warnings,
+      warnings: avisos,
       /** Avisa que confirmar vai substituir o mês já importado. */
       replacesExisting: (existing?._count.stats ?? 0) > 0
     });

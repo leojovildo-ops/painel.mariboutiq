@@ -89,7 +89,9 @@ export function normalize(value: string): string {
 /** Abas de modelo/rascunho: "LOJA", "VEND", "VEND 1", "vend 2"... */
 export function isTemplateSheet(name: string): boolean {
   const n = normalize(name);
-  return n === "LOJA" || /^VEND(EDORA)?S?\.?( ?\d+)?$/.test(n);
+  // "RAFAELA TESTE" e parecidas são abas de rascunho e virariam uma vendedora
+  // fantasma no ranking se entrassem.
+  return n === "LOJA" || /^VEND(EDORA)?S?\.?( ?\d+)?$/.test(n) || /\bTESTE?\b/.test(n);
 }
 
 export function isStoreSheet(name: string): boolean {
@@ -209,31 +211,73 @@ function parseSheet(
     if (bloco.cols["SALAO"] != null) temSalao = true;
     if (bloco.cols["ONLINE"] != null) temOnline = true;
 
-    for (let row = FIRST_DAY_ROW; row <= MAX_ROW; row++) {
-      const serial = num(sheet, bloco.colDate, row);
-      if (serial == null) continue;
-      const data = fromSerial(serial);
-      // Linha sem data válida = linha de total/média do bloco, não é dia.
-      if (!data) continue;
-
-      datas.push({ year: data.year, month: data.month });
-
-      const col = (label: string) => bloco.cols[label];
+    const col = (label: string) => bloco.cols[label];
+    const lerLinha = (row: number) => {
       const ler = (label: string) => (col(label) != null ? num(sheet, col(label), row) : null);
       const lerInt = (label: string) => {
         const v = ler(label);
         return v == null ? null : Math.round(v);
       };
-
-      diasComMes.push({ year: data.year, month: data.month });
-      days.push({
-        day: data.day,
+      return {
         revenue: ler("FATURAMENTO"),
         sales: lerInt("VENDAS"),
         salao: ler("SALAO"),
         online: ler("ONLINE"),
         pieces: lerInt("PECAS")
-      });
+      };
+    };
+
+    // Primeira passada: o que cada linha do bloco tem.
+    const linhas = [];
+    for (let row = FIRST_DAY_ROW; row <= MAX_ROW; row++) {
+      const serial = num(sheet, bloco.colDate, row);
+      const data = serial == null ? null : fromSerial(serial);
+      const valores = lerLinha(row);
+      const temValor =
+        valores.revenue != null || valores.sales != null || valores.pieces != null ||
+        valores.salao != null || valores.online != null;
+      linhas.push({ row, data, valores, temValor });
+    }
+
+    const comData = linhas.filter((l) => l.data != null);
+    const primeiraComData = comData[0]?.row ?? -1;
+    const ultimaComData = comData[comData.length - 1]?.row ?? -1;
+
+    for (const linha of linhas) {
+      let dia: number | null = null;
+      let ano = 0;
+      let mesLinha = 0;
+      let inferido = false;
+
+      if (linha.data) {
+        dia = linha.data.day;
+        ano = linha.data.year;
+        mesLinha = linha.data.month;
+      } else if (
+        // Dia com valores mas SEM data preenchida. Só é recuperado quando cai
+        // no meio dos dias já datados do bloco: fora disso a linha seria o
+        // total ou a média do bloco, e somá-la contaria o mês duas vezes.
+        linha.temValor &&
+        linha.row > primeiraComData &&
+        linha.row < ultimaComData
+      ) {
+        const anterior = comData.filter((l) => l.row < linha.row).pop();
+        if (anterior?.data) {
+          dia = anterior.data.day + (linha.row - anterior.row);
+          ano = anterior.data.year;
+          mesLinha = anterior.data.month;
+          inferido = true;
+          warnings.push(
+            `Aba "${sheetName}": a linha ${linha.row} tem valores mas está sem a data preenchida; foi contada como dia ${dia}. Confira na planilha.`
+          );
+        }
+      }
+
+      if (dia == null) continue;
+      if (!inferido) datas.push({ year: ano, month: mesLinha });
+
+      diasComMes.push({ year: ano, month: mesLinha });
+      days.push({ day: dia, ...linha.valores });
     }
   }
 
