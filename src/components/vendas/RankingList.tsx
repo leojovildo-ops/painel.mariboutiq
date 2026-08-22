@@ -1,6 +1,7 @@
 import type { SellerRow } from "@/lib/data/months";
 import { decimal, integer, money } from "@/lib/format";
 import { LevelBadge } from "./LevelBadge";
+import { NotaAtendimento } from "./NotaAtendimento";
 
 const MEDAL = ["1º", "2º", "3º"];
 
@@ -75,6 +76,7 @@ export function RankingList({
                       projeção <span className="font-semibold text-creme-300">{money(row.projection)}</span>
                     </p>
                   )}
+                  <NotaAtendimento score={row.npsScore} />
                 </div>
               </div>
 

@@ -7,6 +7,7 @@ import { MonthSelector } from "@/components/ui/MonthSelector";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { StatCard } from "@/components/ui/StatCard";
+import { NotaAtendimento } from "@/components/vendas/NotaAtendimento";
 
 export const metadata: Metadata = { title: "Metas da Loja · Painel Mariboutique 360" };
 export const dynamic = "force-dynamic";
@@ -42,9 +43,20 @@ export default async function MetasPage({ searchParams }: { searchParams: { mes?
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="label">Faturamento do mês</p>
-                <p className="num mt-1.5 font-display text-4xl font-bold text-creme sm:text-5xl">
-                  {money(store.revenue)}
-                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-3">
+                  <p className="num font-display text-4xl font-bold text-creme sm:text-5xl">
+                    {money(store.revenue)}
+                  </p>
+                  <NotaAtendimento
+                    score={store.npsScore}
+                    sufixo={store.npsCalculado ? "média das vendedoras do mês" : undefined}
+                  />
+                </div>
+                {store.npsScore != null && (
+                  <p className="mt-1 text-xs text-creme-700">
+                    Atendimento{store.npsCalculado ? " · média das vendedoras do mês" : ""}
+                  </p>
+                )}
               </div>
 
               {store.level.nextTarget != null && (

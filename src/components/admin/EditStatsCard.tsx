@@ -15,6 +15,7 @@ export interface EditableRow {
   tkm: number | null;
   projection: number | null;
   note: string | null;
+  npsScore: number | null;
   editedAt: string | null;
 }
 
@@ -51,7 +52,8 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
     pa: row.pa == null ? "" : String(row.pa),
     tkm: row.tkm == null ? "" : String(row.tkm),
     projection: row.projection == null ? "" : String(row.projection),
-    note: row.note ?? ""
+    note: row.note ?? "",
+    npsScore: row.npsScore == null ? "" : String(row.npsScore)
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +72,8 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
         pa: toValue(form.pa),
         tkm: toValue(form.tkm),
         projection: toValue(form.projection),
-        note: form.note
+        note: form.note,
+        npsScore: toValue(form.npsScore)
       })
     });
 
@@ -96,6 +99,11 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
         {row.scope === "STORE" && (
           <Field label="Projeção" value={form.projection} onChange={(v) => setForm({ ...form, projection: v })} />
         )}
+        <Field
+          label={row.scope === "STORE" ? "Nota atendimento (vazio = média)" : "Nota atendimento (0 a 10)"}
+          value={form.npsScore}
+          onChange={(v) => setForm({ ...form, npsScore: v })}
+        />
       </div>
 
       <label className="mt-4 block">
@@ -145,6 +153,7 @@ export function EditStatsCard({ rows }: { rows: EditableRow[] }) {
                 <p className="num mt-0.5 text-sm text-creme-500">
                   {money(row.revenue)} · {integer(row.salesCount)} vendas · {integer(row.pieces)} peças · P.A.{" "}
                   {decimal(row.pa)} · TKM {money(row.tkm)}
+                  {row.npsScore != null && ` · atendimento ${decimal(row.npsScore)}`}
                 </p>
                 {row.note && <p className="mt-1 text-xs text-creme-500">{row.note}</p>}
                 {row.editedAt && (

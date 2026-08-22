@@ -149,6 +149,11 @@ model MonthlyStats {
   /// Linha 25: projeção de fechamento do mês.
   projection  Decimal? @db.Decimal(12, 2)
 
+  /// Nota de satisfação do atendimento no mês, de 0 a 10 (média das respostas
+  /// da pesquisa, não o índice NPS de promotores menos detratores).
+  /// Na loja, fica nula quando deve ser calculada a partir das vendedoras.
+  npsScore Decimal? @db.Decimal(4, 2)
+
   /// Observação do mês, mostrada nas telas junto do nome da vendedora.
   /// Preenchida sozinha quando a planilha traz mais de uma aba da mesma
   /// pessoa (ex.: período de experiência + carteira assinada), e editável

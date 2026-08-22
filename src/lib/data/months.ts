@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { computeLevel, type GoalLevelName, type LevelProgress } from "@/lib/levels";
+import { mediaDaLoja } from "@/lib/nps";
 
 /** Prisma devolve Decimal; as telas trabalham com number | null ("sem dado"). */
 function toNumber(value: Prisma.Decimal | null): number | null {
@@ -30,6 +31,8 @@ export interface SellerRow {
   projection: number | null;
   /** Observação do mês, mostrada junto do nome. */
   note: string | null;
+  /** Nota de atendimento do mês, de 0 a 10. */
+  npsScore: number | null;
   editedAt: Date | null;
   level: LevelProgress;
   position: number;
@@ -45,6 +48,10 @@ export interface StoreRow {
   workingDays: number | null;
   workedDays: number | null;
   level: LevelProgress;
+  /** Nota de atendimento da loja no mês, de 0 a 10. */
+  npsScore: number | null;
+  /** true quando a nota veio da média das vendedoras, e não digitada à mão. */
+  npsCalculado: boolean;
 }
 
 export function periodSlug(year: number, month: number): string {
@@ -90,6 +97,7 @@ export async function getSellerRanking(periodId: string): Promise<SellerRow[]> {
         online: toNumber(s.online),
         projection: toNumber(s.projection),
         note: s.note,
+        npsScore: toNumber(s.npsScore),
         editedAt: s.editedAt,
         level: computeLevel(
           revenue,
@@ -107,6 +115,20 @@ export async function getStoreMonth(periodId: string): Promise<StoreRow | null> 
   });
   if (!stats) return null;
 
+  // A nota da loja é a média das vendedoras do mês; um valor digitado à mão
+  // na tela de Administração tem prioridade sobre a média.
+  const manual = toNumber(stats.npsScore);
+  let npsScore = manual;
+  let npsCalculado = false;
+  if (npsScore == null) {
+    const notas = await prisma.monthlyStats.findMany({
+      where: { periodId, scope: "SELLER", npsScore: { not: null } },
+      select: { npsScore: true }
+    });
+    npsScore = mediaDaLoja(notas.map((n) => toNumber(n.npsScore)));
+    npsCalculado = npsScore != null;
+  }
+
   const revenue = Number(stats.revenue);
   return {
     revenue,
@@ -120,7 +142,9 @@ export async function getStoreMonth(periodId: string): Promise<StoreRow | null> 
     level: computeLevel(
       revenue,
       stats.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
-    )
+    ),
+    npsScore,
+    npsCalculado
   };
 }
 

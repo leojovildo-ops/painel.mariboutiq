@@ -17,7 +17,9 @@ const schema = z.object({
   online: optionalNumber.optional(),
   projection: optionalNumber.optional(),
   /** Observação do mês. String vazia apaga. */
-  note: z.string().max(500).nullable().optional()
+  note: z.string().max(500).nullable().optional(),
+  /** Nota de atendimento de 0 a 10; null limpa e, na loja, volta a usar a média. */
+  npsScore: z.union([z.number().min(0).max(10), z.null()]).optional()
 });
 
 /** Correção manual de qualquer número já importado — só Administrador. */
@@ -54,6 +56,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         online: body.online !== undefined ? body.online : stats.online,
         projection: body.projection !== undefined ? body.projection : stats.projection,
         note: body.note !== undefined ? (body.note?.trim() || null) : stats.note,
+        npsScore: body.npsScore !== undefined ? body.npsScore : stats.npsScore,
         editedAt: new Date(),
         editedById: user.id
       }
