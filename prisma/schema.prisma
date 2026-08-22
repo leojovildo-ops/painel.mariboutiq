@@ -43,6 +43,13 @@ enum ImportKind {
   EXPENSES
 }
 
+/// Onde o dinheiro fica: conta de banco, maquininha ou dinheiro em especie.
+enum AccountKind {
+  BANCO
+  MAQUININHA
+  ESPECIE
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -100,6 +107,7 @@ model Period {
   imports  ImportBatch[]
   expenses Expense[]
   finance  FinanceMonth?
+  balances AccountBalance[]
 
   @@unique([year, month])
   @@map("periods")
@@ -250,4 +258,42 @@ model FinanceMonth {
   updatedAt    DateTime @updatedAt
 
   @@map("finance_months")
+}
+
+/// Conta em que o dinheiro da loja fica (Bradesco, Stone, espécie...).
+model Account {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  kind      AccountKind @default(BANCO)
+  active    Boolean     @default(true)
+  /// Ordem de exibição na tabela de saldos.
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  balances AccountBalance[]
+
+  @@map("accounts")
+}
+
+/// Saldo de abertura e de fechamento de uma conta em um mês.
+///
+/// Preenchido à mão a partir dos extratos, então os dois valores são
+/// opcionais: extrato que não foi encontrado fica como "sem dado", e nunca
+/// como zero — zero é um saldo de verdade e significa outra coisa.
+model AccountBalance {
+  id        String   @id @default(cuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  periodId  String
+  period    Period   @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  opening   Decimal? @db.Decimal(12, 2)
+  closing   Decimal? @db.Decimal(12, 2)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountId, periodId])
+  @@index([periodId])
+  @@map("account_balances")
 }

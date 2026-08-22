@@ -6,6 +6,8 @@ import { periodLabel } from "@/lib/format";
 import { UploadCard } from "@/components/admin/UploadCard";
 import { UploadDespesasCard } from "@/components/admin/UploadDespesasCard";
 import { UploadPesquisaCard } from "@/components/admin/UploadPesquisaCard";
+import { SaldosCard } from "@/components/admin/SaldosCard";
+import { anosComPeriodo, getSaldosDoAno, listarContas } from "@/lib/data/saldos";
 import { EditStatsCard } from "@/components/admin/EditStatsCard";
 import { UsersCard } from "@/components/admin/UsersCard";
 import { MonthSelector } from "@/components/ui/MonthSelector";
@@ -18,6 +20,12 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
 
   const periods = await listPeriods();
   const period = resolvePeriod(periods, searchParams.mes);
+
+  // Saldos das contas: o lançamento fica aqui, junto dos uploads, e a tela do
+  // Financeiro mostra o resultado sem botão de editar.
+  const anos = admin.canViewFinance ? await anosComPeriodo() : [];
+  const contas = admin.canViewFinance ? (await listarContas()).filter((c) => c.active) : [];
+  const mesesDeSaldos = anos.length > 0 ? await getSaldosDoAno(anos[0], contas) : [];
 
   const [sellers, users, stats] = await Promise.all([
     prisma.seller.findMany({ orderBy: { name: "asc" } }),
@@ -45,6 +53,8 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
       <UploadPesquisaCard />
 
       {admin.canViewFinance && <UploadDespesasCard />}
+
+      {admin.canViewFinance && contas.length > 0 && <SaldosCard meses={mesesDeSaldos} contas={contas} />}
 
       <section className="space-y-4">
         <div>

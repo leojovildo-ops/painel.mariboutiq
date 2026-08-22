@@ -20,7 +20,8 @@ const VENDAS: NavItem[] = [
 
 const FINANCEIRO: NavItem[] = [
   { href: "/financeiro", label: "Dashboard do mês" },
-  { href: "/financeiro/ano", label: "Resultado do ano" }
+  { href: "/financeiro/ano", label: "Resultado do ano" },
+  { href: "/financeiro/contas", label: "Saldos das contas" }
 ];
 
 /** Módulo que ainda não existe; fica visível para marcar o lugar dele. */

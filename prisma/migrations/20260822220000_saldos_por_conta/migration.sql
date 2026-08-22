@@ -1,0 +1,2 @@
+-- Controle de saldo por conta, mes a mes (ver o schema para os detalhes).
+-- Aplicada via painel do Supabase; registrada aqui para o historico.
