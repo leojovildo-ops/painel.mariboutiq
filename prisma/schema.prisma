@@ -1,0 +1,180 @@
+// Painel Mariboutique 360 - modulo de VENDAS
+// Fonte dos dados: planilhas .xlsx mensais preenchidas na loja e importadas
+// manualmente por um Administrador (ver src/lib/xlsx/parseMonthWorkbook.ts).
+// Fase 1: metas da loja, ranking de vendas e ranking de nivel. Sem financeiro.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SUPERVISORA
+  VENDEDORA
+}
+
+/// "Mari Boutique" (aba consolidada) vs cada aba de vendedora.
+enum StatsScope {
+  STORE
+  SELLER
+}
+
+/// Os nomes vem das proprias planilhas (colunas I/J/K, linhas 23-25).
+enum GoalLevel {
+  PRATA
+  OURO
+  DIAMANTE
+}
+
+enum ImportStatus {
+  PENDING
+  CONFIRMED
+  DISCARDED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(VENDEDORA)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  /// Só para o perfil VENDEDORA: liga o login à aba da planilha.
+  sellerId String? @unique
+  seller   Seller? @relation(fields: [sellerId], references: [id])
+
+  imports     ImportBatch[]
+  editedStats MonthlyStats[] @relation("StatsEditedBy")
+
+  @@map("users")
+}
+
+/// Uma vendedora = uma aba da planilha. Criada automaticamente na importação
+/// quando o nome da aba ainda não existe (a equipe muda de mês para mês).
+model Seller {
+  id        String   @id @default(cuid())
+  /// Nome da aba, normalizado em maiúsculas (ex.: "MAYARA").
+  sheetName String   @unique
+  /// Nome de exibição, editável pelo Administrador (ex.: "Mayara Silva").
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?
+  stats MonthlyStats[]
+
+  @@map("sellers")
+}
+
+/// Um mês importado (ex.: 2026/07). Criado na primeira importação do mês.
+model Period {
+  id    String @id @default(cuid())
+  year  Int
+  month Int
+
+  stats   MonthlyStats[]
+  imports ImportBatch[]
+
+  @@unique([year, month])
+  @@map("periods")
+}
+
+model ImportBatch {
+  id            String       @id @default(cuid())
+  fileName      String
+  status        ImportStatus @default(PENDING)
+  /// Prévia extraída do arquivo, mostrada para conferência antes de salvar.
+  preview       Json
+  sheetsFound   Int          @default(0)
+  sheetsIgnored Json?
+  warnings      Json?
+  periodId      String?
+  period        Period?      @relation(fields: [periodId], references: [id])
+  importedById  String
+  importedBy    User         @relation(fields: [importedById], references: [id])
+  createdAt     DateTime     @default(now())
+  confirmedAt   DateTime?
+
+  @@index([status])
+  @@map("import_batches")
+}
+
+/// Números consolidados do mês, por vendedora (scope SELLER) ou da loja
+/// inteira (scope STORE, aba "Mari Boutique"). Campos nulos = "sem dado"
+/// na planilha de origem (planilhas antigas não têm SALÃO/ONLINE).
+model MonthlyStats {
+  id       String     @id @default(cuid())
+  scope    StatsScope
+  periodId String
+  period   Period     @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  sellerId String?
+  seller   Seller?    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  revenue    Decimal  @default(0) @db.Decimal(12, 2)
+  salesCount Int      @default(0)
+  pieces     Int      @default(0)
+  /// Peças por atendimento e ticket médio. Nulos quando não há vendas
+  /// suficientes para calcular (planilha traz #DIV/0!).
+  pa         Decimal? @db.Decimal(10, 2)
+  tkm        Decimal? @db.Decimal(12, 2)
+  salao      Decimal? @db.Decimal(12, 2)
+  online     Decimal? @db.Decimal(12, 2)
+
+  workingDays Int?
+  workedDays  Int?
+  /// Linha 25: projeção de fechamento do mês.
+  projection  Decimal? @db.Decimal(12, 2)
+
+  /// Marcado quando um Administrador corrigiu um valor à mão.
+  editedAt   DateTime?
+  editedById String?
+  editedBy   User?     @relation("StatsEditedBy", fields: [editedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  goals Goal[]
+  days  DailyEntry[]
+
+  @@unique([periodId, sellerId, scope])
+  @@index([periodId])
+  @@map("monthly_stats")
+}
+
+/// Metas Prata/Ouro/Diamante do mês (colunas I/J/K, linhas 23-25).
+/// Podem ser diferentes por vendedora e por mês.
+model Goal {
+  id      String       @id @default(cuid())
+  statsId String
+  stats   MonthlyStats @relation(fields: [statsId], references: [id], onDelete: Cascade)
+  level   GoalLevel
+  target  Decimal      @db.Decimal(12, 2)
+
+  @@unique([statsId, level])
+  @@map("goals")
+}
+
+/// Linhas 8..18 da aba: um registro por dia do mês.
+model DailyEntry {
+  id      String       @id @default(cuid())
+  statsId String
+  stats   MonthlyStats @relation(fields: [statsId], references: [id], onDelete: Cascade)
+  day     Int
+  revenue Decimal?     @db.Decimal(12, 2)
+  sales   Int?
+  salao   Decimal?     @db.Decimal(12, 2)
+  online  Decimal?     @db.Decimal(12, 2)
+  pieces  Int?
+
+  @@unique([statsId, day])
+  @@map("daily_entries")
+}

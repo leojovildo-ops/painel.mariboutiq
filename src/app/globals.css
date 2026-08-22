@@ -2,26 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@layer base {
+  html {
+    color-scheme: dark;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    @apply bg-base text-creme font-sans antialiased;
+    /* Brilho terracota discreto no topo, para o fundo não ficar chapado. */
+    background-image: radial-gradient(1100px 520px at 15% -10%, rgba(166, 75, 42, 0.28), transparent 60%),
+      radial-gradient(900px 420px at 95% 0%, rgba(228, 113, 78, 0.14), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-coral/30;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+@layer components {
+  .card {
+    @apply rounded-2xl border border-base-600/70 bg-base-800/80 shadow-card backdrop-blur-sm;
+  }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-creme-700;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+           transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-coral text-base hover:bg-coral-400;
+  }
+
+  .btn-secondary {
+    @apply btn border border-base-600 bg-base-700/60 text-creme-300 hover:border-coral/50 hover:text-creme;
+  }
+
+  .btn-ghost {
+    @apply btn text-creme-500 hover:text-creme;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-base-600 bg-base-700/50 px-3.5 py-2.5 text-sm text-creme
+           placeholder:text-creme-700 outline-none transition
+           focus:border-coral/70 focus:ring-2 focus:ring-coral/25;
+  }
+
+  /* Números de painel: tabulares, para as colunas do ranking não dançarem. */
+  .num {
+    font-variant-numeric: tabular-nums;
   }
 }

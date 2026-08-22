@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# planilhas reais nao vao para o repositorio
+/planilhas-exemplo/*.xlsx
