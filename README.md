@@ -1,7 +1,7 @@
 # Painel Mariboutique 360
 
-Painel de gestão de vendas da **Mari Boutique**. Fase 1: **metas da loja, ranking de vendas e ranking de nível**.
-Não há módulo financeiro nesta fase — a navegação já reserva o espaço para ele ("Em breve").
+Painel de gestão da **Mari Boutique**: **metas da loja, ranking de vendas, ranking de nível,
+ranking do ano** e um **dashboard financeiro** alimentado pela planilha de despesas.
 
 Os dados vêm das planilhas mensais preenchidas na loja: o Administrador sobe o `.xlsx` do mês,
 o sistema lê as abas, guarda os números no banco e atualiza os painéis. O sistema **não substitui**
@@ -11,11 +11,13 @@ as planilhas.
 
 | Perfil | Acesso |
 | --- | --- |
-| **Administrador** | Tudo: upload das planilhas, correção de qualquer número, cadastro/desativação de acessos. |
+| **Administrador** | Tudo em vendas: upload das planilhas, correção de qualquer número, cadastro/desativação de acessos. |
 | **Supervisora** | Só visualização — vê o desempenho completo de toda a equipe. |
 | **Vendedora** | Só visualização — vê o ranking completo, com a própria posição destacada. |
 
-Nenhum perfil vê dados financeiros da empresa (fora do escopo desta fase).
+O **financeiro é um direito por pessoa, não por perfil** (`users.canViewFinance`). Ser Administrador
+não basta: um Administrador novo não passa a ver os números da empresa até alguém que já os vê
+liberar o acesso, em Administração → Acessos da equipe. Supervisora e vendedora nunca veem.
 
 ## Stack
 
@@ -29,7 +31,42 @@ Nenhum perfil vê dados financeiros da empresa (fora do escopo desta fase).
 - `/metas` — meta da loja no mês vs realizado, barra de progresso grande e projeção de fechamento.
 - `/ranking` — placar das vendedoras por total vendido, com as 5 métricas (total, vendas, peças, P.A., TKM) e seletor de mês.
 - `/niveis` — selo Prata / Ouro / Diamante de cada vendedora e barra até a meta do próximo nível.
+- `/ranking-ano` — ranking do ano por **metas batidas**: ordena por Diamante, depois Ouro, Prata e só
+  então faturamento, premiando consistência em vez de um mês excepcional. Os níveis contam de forma
+  cumulativa (um mês de Diamante conta também como Ouro e Prata) e a fita de 12 meses mostra o ano todo.
+- `/financeiro` — dashboard: faturamento, despesas, lucro e margem; evolução do ano; despesas por grupo;
+  maiores lançamentos; e a **leitura do mês em texto**, dividida em positivo, ponto de atenção e negativo.
 - `/admin` — upload com conferência antes de salvar, correção manual de valores e acessos da equipe.
+
+### A leitura em texto do financeiro
+
+Cada observação sai de uma comparação explícita, para poder ser conferida contra a planilha:
+a meta de margem de 10% (que é a da própria aba `DESPESAS GERAL`), o mês anterior, ou a média dos
+meses já fechados. Ver `src/lib/finance/insights.ts`.
+
+O **mês corrente é tratado como em andamento**: comparar um mês pela metade com meses fechados
+inventa quedas que não existem, então essas comparações só entram quando o mês fecha.
+
+## A planilha de despesas
+
+Um arquivo por ano. Abas `JAN`..`DEZ`, uma linha por lançamento a partir da linha 2:
+`A GRUPO | B DESCRIÇÃO | C TIPO DOCUMENTO | D VENCIMENTO | E VALOR | F DATA PAGAMENTO | G SALDO`.
+As colunas H+ são o resumo lateral da própria planilha e são ignoradas. A linha `FATURAMENTO BRUTO`
+da aba `RESUMO DESPESAS ANO` dá o faturamento de cada mês.
+
+- **Meses futuros ficam de fora.** As abas de meses que ainda não aconteceram já vêm com as contas
+  recorrentes pré-lançadas — isso é previsão, e entraria no painel inflando o resultado do ano.
+- **O faturamento das vendas tem prioridade.** Quando o mês já teve a planilha de vendas importada,
+  é esse o número usado; a planilha financeira só preenche os meses que faltam. Uma nunca sobrescreve
+  a outra (tabelas `monthly_stats` e `finance_months`).
+- **Grupos são normalizados**: `DESPESAS FUNCIONÁRIO` e `DESPESAS FUNCIONÁRIOS` são o mesmo grupo.
+- Reimportar o ano substitui os lançamentos dos meses presentes no arquivo.
+
+Para conferir antes de importar:
+
+```bash
+npx tsx scripts/conferirDespesas.ts "/caminho/DESPESAS 2026.xlsx"
+```
 
 ## Configuração local
 
@@ -139,7 +176,6 @@ Dois detalhes que custaram caro e é bom não reintroduzir:
   anônimos recusam. A proteção de verdade é server-side (`requireUser`/`requireAdmin` nos
   layouts e `apiUser` nas rotas) — veja `src/app/(app)/README-protecao.md`.
 
-## Fora do escopo desta fase
+## Fora do escopo
 
-Financeiro, despesas, lucro/margem, contas bancárias e estoque. A navegação mostra esses módulos
-como "Fase 2" para deixar o lugar deles claro.
+Contas bancárias e estoque. A navegação mostra "Estoque" como Fase 2 para marcar o lugar dele.
