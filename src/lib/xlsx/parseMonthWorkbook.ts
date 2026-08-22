@@ -1,20 +1,21 @@
 /**
  * Leitor das planilhas mensais da Mari Boutique.
  *
- * Layout real de cada aba (uma aba por vendedora + uma aba "Mari Boutique"
- * com o consolidado da loja, no mesmo formato):
+ * O layout real (conferido contra "AGOSTO VENDAS 2026.xlsx" e "ABR 2026.xlsx")
+ * NÃO é uma tabela única: cada aba tem TRÊS BLOCOS DE DIAS LADO A LADO, de uns
+ * dez dias cada, e a linha de totais (19) totaliza apenas o bloco em que está.
+ * O total do mês é a soma dos três blocos — é isso que bate com "Total Mês".
  *
- *   D2 "dias úteis"        E2 valor
- *   D3 "dias trabalhados"  E3 valor
- *   linha 7   cabeçalho a partir de D: Data | Faturamento | Vendas | SALÃO | ONLINE | Peças | PA | TM
- *             (SALÃO/ONLINE não existem nas planilhas antigas -> as colunas seguintes andam para trás,
- *              por isso o cabeçalho é lido de verdade em vez de assumir posições fixas)
- *   linha 8+  um dia por linha, até a linha de totais
- *   linha 19  totais do mês
- *   D23/E23   "Total Mês" + faturamento do mês
- *   D25       "Projeção"  + valor em E25
- *   I23:K25   metas: I = nível (Prata/Ouro/Diamante), J = meta em R$, K = % atingido
- *   K27       TKM do mês        K28  PA do mês
+ *   bloco 1: datas em D, dados E..K      (totais em E19..K19)
+ *   bloco 2: datas em M, dados N..T      (totais em N19..T19)
+ *   bloco 3: datas em V, dados W..AC     (totais em W19..AC19)
+ *
+ * Em cada bloco o cabeçalho fica na linha 7: Faturamento | Vendas | SALÃO |
+ * ONLINE | Peças | PA | TM. Por isso nada aqui é lido por posição fixa: os
+ * blocos são localizados procurando "Faturamento" na linha 7, e os demais
+ * valores (metas, TKM, PA, projeção, dias úteis) são achados pelo rótulo,
+ * não pelo endereço da célula. Assim uma coluna a mais ou a menos numa
+ * planilha antiga não desalinha a leitura inteira.
  *
  * Células com #DIV/0! (e demais erros do Excel) viram `null` = "sem dado",
  * nunca 0 e nunca o texto do erro.
@@ -29,6 +30,7 @@ export interface ParsedGoal {
 }
 
 export interface ParsedDay {
+  /** Dia do mês, vindo da data da própria planilha (não da posição da linha). */
   day: number;
   revenue: number | null;
   sales: number | null;
@@ -38,7 +40,6 @@ export interface ParsedDay {
 }
 
 export interface ParsedSheet {
-  /** Nome da aba, normalizado em maiúsculas. */
   sheetName: string;
   scope: "STORE" | "SELLER";
   workingDays: number | null;
@@ -57,7 +58,6 @@ export interface ParsedSheet {
 }
 
 export interface ParsedWorkbook {
-  /** Mês/ano detectados no nome do arquivo ou nas datas da planilha. */
   year: number | null;
   month: number | null;
   store: ParsedSheet | null;
@@ -71,18 +71,24 @@ const MESES: Record<string, number> = {
   JULHO: 7, AGOSTO: 8, SETEMBRO: 9, OUTUBRO: 10, NOVEMBRO: 11, DEZEMBRO: 12
 };
 
-/** Remove acentos e caixa, para comparar rótulos/nomes de aba de forma tolerante. */
+/** Abreviações usadas nos nomes de arquivo ("ABR 2026.xlsx"). */
+const MESES_ABREV: Record<string, number> = {
+  JAN: 1, FEV: 2, MAR: 3, ABR: 4, MAI: 5, JUN: 6,
+  JUL: 7, AGO: 8, SET: 9, OUT: 10, NOV: 11, DEZ: 12
+};
+
 export function normalize(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
     .trim()
     .toUpperCase();
 }
 
 /** Abas de modelo/rascunho: "LOJA", "VEND", "VEND 1", "vend 2"... */
 export function isTemplateSheet(name: string): boolean {
-  const n = normalize(name).replace(/\s+/g, " ");
+  const n = normalize(name);
   return n === "LOJA" || /^VEND(EDORA)?S?\.?( ?\d+)?$/.test(n);
 }
 
@@ -91,17 +97,20 @@ export function isStoreSheet(name: string): boolean {
   return n.includes("MARI") && n.includes("BOUTIQUE");
 }
 
-function cell(sheet: XLSX.WorkSheet, address: string): XLSX.CellObject | undefined {
-  return sheet[address] as XLSX.CellObject | undefined;
+const MAX_ROW = 40;
+const HEADER_ROW = 7;
+const FIRST_DAY_ROW = 8;
+
+function cellAt(sheet: XLSX.WorkSheet, col: number, row: number): XLSX.CellObject | undefined {
+  return sheet[XLSX.utils.encode_cell({ c: col, r: row - 1 })] as XLSX.CellObject | undefined;
 }
 
-/** Valor numérico da célula, ou null para vazio, erro (#DIV/0!) e texto não numérico. */
-function num(sheet: XLSX.WorkSheet, address: string): number | null {
-  const c = cell(sheet, address);
-  if (!c || c.t === "e") return null;
+/** Número da célula; null para vazio, texto não numérico e erros do Excel. */
+function num(sheet: XLSX.WorkSheet, col: number, row: number): number | null {
+  const c = cellAt(sheet, col, row);
+  if (!c || c.t === "e" || c.v == null) return null;
   if (typeof c.v === "number") return Number.isFinite(c.v) ? c.v : null;
   if (typeof c.v === "string") {
-    // Aceita "R$ 1.234,56" e "1234.56" digitados como texto.
     const cleaned = c.v.replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
     const parsed = Number(cleaned);
     return cleaned !== "" && Number.isFinite(parsed) ? parsed : null;
@@ -109,140 +118,233 @@ function num(sheet: XLSX.WorkSheet, address: string): number | null {
   return null;
 }
 
-function text(sheet: XLSX.WorkSheet, address: string): string {
-  const c = cell(sheet, address);
+function text(sheet: XLSX.WorkSheet, col: number, row: number): string {
+  const c = cellAt(sheet, col, row);
   if (!c || c.t === "e" || c.v == null) return "";
   return String(c.v).trim();
 }
 
-function intOrNull(value: number | null): number | null {
-  return value == null ? null : Math.round(value);
-}
-
-const HEADER_ROW = 7;
-const FIRST_DAY_ROW = 8;
-const TOTALS_ROW_DEFAULT = 19;
-const MAX_DAY_ROW = 60;
-
-/** Mapeia rótulo do cabeçalho (linha 7) -> letra da coluna, a partir de D. */
-function readHeader(sheet: XLSX.WorkSheet): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (let col = 3; col <= 15; col++) {
-    const letter = XLSX.utils.encode_col(col);
-    const label = normalize(text(sheet, `${letter}${HEADER_ROW}`));
-    if (label) map[label] = letter;
+/**
+ * Acha um rótulo em qualquer lugar da aba e devolve o valor da célula ao lado.
+ * É assim que metas, TKM, PA, projeção e dias úteis são lidos — os endereços
+ * mudam de uma planilha para outra, os rótulos não.
+ */
+function valueByLabel(
+  sheet: XLSX.WorkSheet,
+  matches: (label: string) => boolean,
+  lastCol: number,
+  fromRow = 2,
+  toRow = MAX_ROW
+): number | null {
+  for (let row = fromRow; row <= toRow; row++) {
+    for (let col = 0; col <= lastCol; col++) {
+      const label = normalize(text(sheet, col, row));
+      if (label && matches(label)) {
+        // O valor costuma estar na célula seguinte; algumas planilhas deixam
+        // uma célula vazia no meio, então olha até duas à direita.
+        const direto = num(sheet, col + 1, row);
+        if (direto != null) return direto;
+        const pulando = num(sheet, col + 2, row);
+        if (pulando != null) return pulando;
+        return null;
+      }
+    }
   }
-  return map;
+  return null;
 }
 
-/** A linha de totais é a linha 19 na maioria das planilhas, mas é procurada
- *  de verdade (coluna D contendo "TOTAL") para aguentar meses com mais linhas. */
-function findTotalsRow(sheet: XLSX.WorkSheet, dateCol: string): number {
-  for (let row = FIRST_DAY_ROW; row <= MAX_DAY_ROW; row++) {
-    if (normalize(text(sheet, `${dateCol}${row}`)).startsWith("TOTAL")) return row;
+interface Bloco {
+  colDate: number;
+  cols: Record<string, number>;
+}
+
+/** Localiza os blocos de dias pela palavra "Faturamento" na linha do cabeçalho. */
+function findBlocks(sheet: XLSX.WorkSheet, lastCol: number): Bloco[] {
+  const inicios: number[] = [];
+  for (let col = 0; col <= lastCol; col++) {
+    if (normalize(text(sheet, col, HEADER_ROW)) === "FATURAMENTO") inicios.push(col);
   }
-  return TOTALS_ROW_DEFAULT;
+
+  return inicios.map((inicio, i) => {
+    const fim = i + 1 < inicios.length ? inicios[i + 1] - 2 : lastCol;
+    const cols: Record<string, number> = {};
+    for (let col = inicio; col <= fim; col++) {
+      const label = normalize(text(sheet, col, HEADER_ROW));
+      if (label && !(label in cols)) cols[label] = col;
+    }
+    // A coluna da data é a que vem imediatamente antes de "Faturamento".
+    return { colDate: inicio - 1, cols };
+  });
 }
 
-function parseSheet(workbook: XLSX.WorkBook, sheetName: string): ParsedSheet {
+/** Serial de data do Excel -> ano/mês/dia (sistema 1900, o padrão). */
+function fromSerial(serial: number): { year: number; month: number; day: number } | null {
+  if (!Number.isFinite(serial) || serial < 20000 || serial > 80000) return null;
+  const ms = Math.round((serial - 25569) * 86400 * 1000);
+  const d = new Date(ms);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+function parseSheet(
+  workbook: XLSX.WorkBook,
+  sheetName: string
+): { sheet: ParsedSheet; datas: Array<{ year: number; month: number }> } {
   const sheet = workbook.Sheets[sheetName];
   const warnings: string[] = [];
-  const header = readHeader(sheet);
+  const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1");
+  const lastCol = range.e.c;
 
-  const colData = header["DATA"] ?? "D";
-  const colRevenue = header["FATURAMENTO"];
-  const colSales = header["VENDAS"];
-  const colSalao = header["SALAO"];
-  const colOnline = header["ONLINE"];
-  const colPieces = header["PECAS"];
-
-  if (!colRevenue || !colSales || !colPieces) {
-    warnings.push(
-      `Aba "${sheetName}": cabeçalho da linha ${HEADER_ROW} não traz Faturamento/Vendas/Peças; os totais foram lidos das linhas de resumo.`
-    );
-  }
-  if (!colSalao || !colOnline) {
-    warnings.push(`Aba "${sheetName}": sem colunas SALÃO/ONLINE (planilha antiga) — gravado como "sem dado".`);
+  const blocos = findBlocks(sheet, lastCol);
+  if (blocos.length === 0) {
+    warnings.push(`Aba "${sheetName}": não achei o cabeçalho "Faturamento" na linha ${HEADER_ROW}.`);
   }
 
-  const totalsRow = findTotalsRow(sheet, colData);
   const days: ParsedDay[] = [];
-  for (let row = FIRST_DAY_ROW; row < totalsRow; row++) {
-    const day: ParsedDay = {
-      day: row - FIRST_DAY_ROW + 1,
-      revenue: colRevenue ? num(sheet, `${colRevenue}${row}`) : null,
-      sales: colSales ? intOrNull(num(sheet, `${colSales}${row}`)) : null,
-      salao: colSalao ? num(sheet, `${colSalao}${row}`) : null,
-      online: colOnline ? num(sheet, `${colOnline}${row}`) : null,
-      pieces: colPieces ? intOrNull(num(sheet, `${colPieces}${row}`)) : null
-    };
-    days.push(day);
+  const diasComMes: Array<{ year: number; month: number }> = [];
+  const datas: Array<{ year: number; month: number }> = [];
+  let temSalao = false;
+  let temOnline = false;
+
+  for (const bloco of blocos) {
+    if (bloco.cols["SALAO"] != null) temSalao = true;
+    if (bloco.cols["ONLINE"] != null) temOnline = true;
+
+    for (let row = FIRST_DAY_ROW; row <= MAX_ROW; row++) {
+      const serial = num(sheet, bloco.colDate, row);
+      if (serial == null) continue;
+      const data = fromSerial(serial);
+      // Linha sem data válida = linha de total/média do bloco, não é dia.
+      if (!data) continue;
+
+      datas.push({ year: data.year, month: data.month });
+
+      const col = (label: string) => bloco.cols[label];
+      const ler = (label: string) => (col(label) != null ? num(sheet, col(label), row) : null);
+      const lerInt = (label: string) => {
+        const v = ler(label);
+        return v == null ? null : Math.round(v);
+      };
+
+      diasComMes.push({ year: data.year, month: data.month });
+      days.push({
+        day: data.day,
+        revenue: ler("FATURAMENTO"),
+        sales: lerInt("VENDAS"),
+        salao: ler("SALAO"),
+        online: ler("ONLINE"),
+        pieces: lerInt("PECAS")
+      });
+    }
   }
 
-  const sum = (pick: (d: ParsedDay) => number | null) =>
+  // O ultimo bloco costuma ter 31 casas mesmo em meses curtos, entao pode
+  // trazer o dia 1 do mes seguinte. Sem este corte, esse dia colidiria com o
+  // dia 1 do proprio mes e ainda entraria no total.
+  const contagemMes = new Map<string, number>();
+  for (const d of datas) {
+    const chave = `${d.year}-${d.month}`;
+    contagemMes.set(chave, (contagemMes.get(chave) ?? 0) + 1);
+  }
+  const dominante = Array.from(contagemMes.entries()).sort((a, b) => b[1] - a[1])[0];
+  if (dominante) {
+    const [anoDom, mesDom] = dominante[0].split("-").map(Number);
+    const forasteiros = diasComMes.filter((d) => d.year !== anoDom || d.month !== mesDom);
+    if (forasteiros.length > 0) {
+      warnings.push(
+        `Aba "${sheetName}": ${forasteiros.length} dia(s) de outro mes na planilha foram ignorados.`
+      );
+    }
+    for (let i = diasComMes.length - 1; i >= 0; i--) {
+      if (diasComMes[i].year !== anoDom || diasComMes[i].month !== mesDom) {
+        diasComMes.splice(i, 1);
+        days.splice(i, 1);
+      }
+    }
+  }
+
+  days.sort((a, b) => a.day - b.day);
+
+  // Duas linhas com a mesma data quebrariam a gravacao (um registro por dia).
+  const vistos = new Set<number>();
+  for (let i = days.length - 1; i >= 0; i--) {
+    if (vistos.has(days[i].day)) days.splice(i, 1);
+    else vistos.add(days[i].day);
+  }
+
+  // Os totais saem da soma dos dias de TODOS os blocos. Somar é mais confiável
+  // que ler a linha 19, que totaliza só o bloco em que está.
+  const soma = (pick: (d: ParsedDay) => number | null) =>
     days.reduce<number>((acc, d) => acc + (pick(d) ?? 0), 0);
 
-  // Totais: a linha de totais manda; se estiver vazia, cai para a soma dos dias.
-  const totalRevenueRow = colRevenue ? num(sheet, `${colRevenue}${totalsRow}`) : null;
-  const totalSalesRow = colSales ? num(sheet, `${colSales}${totalsRow}`) : null;
-  const totalPiecesRow = colPieces ? num(sheet, `${colPieces}${totalsRow}`) : null;
+  const revenue = soma((d) => d.revenue);
+  const salesCount = Math.round(soma((d) => d.sales));
+  const pieces = Math.round(soma((d) => d.pieces));
+  const salao = temSalao ? soma((d) => d.salao) : null;
+  const online = temOnline ? soma((d) => d.online) : null;
 
-  const revenue = totalRevenueRow ?? sum((d) => d.revenue);
-  const salesCount = Math.round(totalSalesRow ?? sum((d) => d.sales));
-  const pieces = Math.round(totalPiecesRow ?? sum((d) => d.pieces));
+  if (!temSalao || !temOnline) {
+    warnings.push(`Aba "${sheetName}": sem colunas SALÃO/ONLINE — gravado como "sem dado".`);
+  }
 
-  // E23 "Total Mês" deve bater com a linha de totais; divergência vira aviso,
-  // não erro — quem decide é o Administrador na tela de conferência.
-  const totalMes = num(sheet, "E23");
-  if (totalMes != null && Math.abs(totalMes - revenue) > 0.5) {
+  // Conferência contra o "Total Mês" que a própria planilha calcula.
+  const totalMes = valueByLabel(sheet, (l) => l.startsWith("TOTAL MES"), lastCol);
+  if (totalMes != null && Math.abs(totalMes - revenue) > 1) {
     warnings.push(
-      `Aba "${sheetName}": "Total Mês" (${totalMes.toFixed(2)}) não bate com a linha ${totalsRow} (${revenue.toFixed(2)}).`
+      `Aba "${sheetName}": a soma dos dias (${revenue.toFixed(2)}) não bate com o "Total Mês" da planilha (${totalMes.toFixed(2)}). Confira antes de salvar.`
     );
   }
 
-  const salao = colSalao ? sum((d) => d.salao) || null : null;
-  const online = colOnline ? sum((d) => d.online) || null : null;
-
-  // TKM/PA vêm prontos em K27/K28; se a planilha traz #DIV/0!, recalcula.
-  let tkm = num(sheet, "K27");
-  let pa = num(sheet, "K28");
+  // TKM e PA vêm prontos ao lado do rótulo; com #DIV/0! são recalculados.
+  let tkm = valueByLabel(sheet, (l) => l === "TKM", lastCol, 20);
+  let pa = valueByLabel(sheet, (l) => l === "PA", lastCol, 20);
   if (tkm == null && salesCount > 0) tkm = revenue / salesCount;
   if (pa == null && salesCount > 0) pa = pieces / salesCount;
 
   const goals: ParsedGoal[] = [];
-  for (let row = 23; row <= 25; row++) {
-    const levelLabel = normalize(text(sheet, `I${row}`));
-    const target = num(sheet, `J${row}`);
-    const level = (["PRATA", "OURO", "DIAMANTE"] as const).find((l) => levelLabel.startsWith(l));
-    if (level && target != null && target > 0) goals.push({ level, target });
+  for (const level of ["PRATA", "OURO", "DIAMANTE"] as const) {
+    const target = valueByLabel(sheet, (l) => l === level, lastCol, 20);
+    if (target != null && target > 0) goals.push({ level, target });
   }
 
   return {
-    sheetName: normalize(sheetName),
-    scope: isStoreSheet(sheetName) ? "STORE" : "SELLER",
-    workingDays: intOrNull(num(sheet, "E2")),
-    workedDays: intOrNull(num(sheet, "E3")),
-    revenue,
-    salesCount,
-    pieces,
-    pa,
-    tkm,
-    salao,
-    online,
-    projection: num(sheet, "E25"),
-    goals,
-    days,
-    warnings
+    sheet: {
+      sheetName: normalize(sheetName),
+      scope: isStoreSheet(sheetName) ? "STORE" : "SELLER",
+      workingDays: (() => {
+        const v = valueByLabel(sheet, (l) => l.startsWith("DIAS UTEIS"), lastCol, 2, 6);
+        return v == null ? null : Math.round(v);
+      })(),
+      workedDays: (() => {
+        const v = valueByLabel(sheet, (l) => l.startsWith("DIAS TRABALHADOS"), lastCol, 2, 6);
+        return v == null ? null : Math.round(v);
+      })(),
+      revenue,
+      salesCount,
+      pieces,
+      pa,
+      tkm,
+      salao,
+      online,
+      projection: valueByLabel(sheet, (l) => l.startsWith("PROJECAO"), lastCol, 20),
+      goals,
+      days,
+      warnings
+    },
+    datas
   };
 }
 
-/** Mês/ano a partir do nome do arquivo: "JULHO_2026.xlsx", "AGOSTO_VENDAS_2026.xlsx". */
+/** Mês/ano pelo nome do arquivo: "JULHO_2026.xlsx", "AGOSTO VENDAS 2026", "ABR 2026". */
 export function periodFromFileName(fileName: string): { year: number; month: number } | null {
   const n = normalize(fileName);
-  const monthEntry = Object.entries(MESES).find(([nome]) => n.includes(nome));
   const yearMatch = n.match(/(20\d{2})/);
-  if (!monthEntry || !yearMatch) return null;
-  return { year: Number(yearMatch[1]), month: monthEntry[1] };
+  if (!yearMatch) return null;
+
+  const completo = Object.entries(MESES).find(([nome]) => n.includes(nome));
+  if (completo) return { year: Number(yearMatch[1]), month: completo[1] };
+
+  const abrev = Object.entries(MESES_ABREV).find(([nome]) => new RegExp(`\\b${nome}`).test(n));
+  return abrev ? { year: Number(yearMatch[1]), month: abrev[1] } : null;
 }
 
 export function parseMonthWorkbook(buffer: Buffer, fileName: string): ParsedWorkbook {
@@ -250,6 +352,7 @@ export function parseMonthWorkbook(buffer: Buffer, fileName: string): ParsedWork
   const warnings: string[] = [];
   const ignoredSheets: string[] = [];
   const sellers: ParsedSheet[] = [];
+  const todasAsDatas: Array<{ year: number; month: number }> = [];
   let store: ParsedSheet | null = null;
 
   for (const sheetName of workbook.SheetNames) {
@@ -257,8 +360,9 @@ export function parseMonthWorkbook(buffer: Buffer, fileName: string): ParsedWork
       ignoredSheets.push(sheetName);
       continue;
     }
-    const parsed = parseSheet(workbook, sheetName);
+    const { sheet: parsed, datas } = parseSheet(workbook, sheetName);
     warnings.push(...parsed.warnings);
+    todasAsDatas.push(...datas);
     if (parsed.scope === "STORE") store = parsed;
     else sellers.push(parsed);
   }
@@ -266,18 +370,30 @@ export function parseMonthWorkbook(buffer: Buffer, fileName: string): ParsedWork
   if (!store) warnings.push('A planilha não tem a aba "Mari Boutique" — a tela de Metas da Loja ficará sem dados neste mês.');
   if (sellers.length === 0) warnings.push("Nenhuma aba de vendedora encontrada na planilha.");
 
-  const period = periodFromFileName(fileName);
-  if (!period) {
+  // O mês vem das datas da própria planilha (mais confiável que o nome do
+  // arquivo); o nome do arquivo só entra se não houver data nenhuma.
+  const contagem = new Map<string, number>();
+  for (const d of todasAsDatas) {
+    const chave = `${d.year}-${d.month}`;
+    contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
+  }
+  const maisFrequente = Array.from(contagem.entries()).sort((a, b) => b[1] - a[1])[0];
+  const periodoPlanilha = maisFrequente
+    ? { year: Number(maisFrequente[0].split("-")[0]), month: Number(maisFrequente[0].split("-")[1]) }
+    : null;
+  const periodo = periodoPlanilha ?? periodFromFileName(fileName);
+
+  if (!periodo) {
     warnings.push(
-      `Não deu para descobrir o mês pelo nome do arquivo ("${fileName}") — escolha o mês manualmente antes de confirmar.`
+      `Não deu para descobrir o mês (nem pelas datas da planilha, nem pelo nome "${fileName}") — escolha o mês antes de confirmar.`
     );
   }
 
   sellers.sort((a, b) => b.revenue - a.revenue);
 
   return {
-    year: period?.year ?? null,
-    month: period?.month ?? null,
+    year: periodo?.year ?? null,
+    month: periodo?.month ?? null,
     store,
     sellers,
     ignoredSheets,

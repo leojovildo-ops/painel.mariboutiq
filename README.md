@@ -68,37 +68,54 @@ conexão direta (porta 5432), que funciona de uma máquina com IPv6.
 ## Como as planilhas são lidas
 
 Uma aba por vendedora (o nome da aba é o primeiro nome dela) + uma aba `Mari Boutique` com o
-consolidado. Abas de modelo (`LOJA`, `VEND`, `VEND 1`, `vend 2`…) são ignoradas. Em cada aba:
+consolidado. Abas de modelo (`LOJA`, `VEND`, `VEND 1`, `vend`…) são ignoradas.
 
-| Onde | O quê |
-| --- | --- |
-| `E2` / `E3` | dias úteis / dias trabalhados |
-| linha 7 (de D em diante) | cabeçalho: Data, Faturamento, Vendas, SALÃO, ONLINE, Peças, PA, TM |
-| linhas 8 → totais | um dia por linha |
-| linha 19 | totais do mês |
-| `E23` | Total Mês (conferido contra a linha 19) |
-| `E25` | Projeção |
-| `I23:J25` | metas Prata / Ouro / Diamante |
-| `K27` / `K28` | TKM / P.A. do mês |
+**O detalhe que mais importa:** cada aba não tem uma tabela só — tem **três blocos de dias lado a
+lado**, de cerca de dez dias cada:
 
-Detalhes que o leitor trata sozinho:
+| Bloco | Datas | Dados | Totais |
+| --- | --- | --- | --- |
+| 1 | coluna D | E–K | linha 19 |
+| 2 | coluna M | N–T | linha 19 |
+| 3 | coluna V | W–AC | linha 19 |
 
-- **O cabeçalho da linha 7 é lido de verdade**, não assumido — planilhas antigas sem `SALÃO`/`ONLINE`
-  têm as colunas seguintes deslocadas e continuam funcionando (os canais ficam como "sem dado").
-- **`#DIV/0!` e demais erros do Excel viram "sem dado"**, nunca zero e nunca texto de erro na tela.
-  TKM e P.A. são recalculados a partir dos totais quando a planilha traz erro.
-- A **linha de totais é procurada** pela palavra "TOTAL" na coluna D, com a linha 19 como padrão.
-- **Divergência entre `E23` e a linha de totais vira aviso** na tela de conferência, não erro.
+A linha 19 totaliza **apenas o bloco em que está**. Quem lê só o primeiro bloco vê cerca de um
+terço do mês — foi exatamente esse o erro da primeira versão. O total do mês é a soma dos três
+blocos, e é isso que bate com o `Total Mês` da planilha.
+
+Cada bloco tem seu cabeçalho na linha 7: Faturamento, Vendas, SALÃO, ONLINE, Peças, PA, TM.
+
+Nada é lido por endereço fixo de célula:
+
+- **Os blocos são localizados procurando "Faturamento" na linha 7**, e a coluna de datas é a que
+  vem imediatamente antes. Uma coluna a mais ou a menos não desalinha a leitura.
+- **Metas, TKM, PA, projeção e dias úteis são achados pelo rótulo** (`Prata`, `Ouro`, `Diamante`,
+  `TKM`, `PA`, `Projeção`, `dias uteis`), com o valor na célula ao lado. Os endereços mudam de uma
+  planilha para outra; os rótulos não.
+- **O dia vem da data da própria célula**, não da posição da linha.
+- **O mês vem das datas da planilha**, não do nome do arquivo (o nome é só reserva, e entende
+  tanto `AGOSTO VENDAS 2026` quanto `ABR 2026`).
+- **Os totais são somados dia a dia** e conferidos contra o `Total Mês` da planilha; divergência
+  vira aviso na tela de conferência, não erro.
+- **`#DIV/0!` e demais erros do Excel viram "sem dado"**, nunca zero. TKM e PA são recalculados
+  quando a planilha traz erro.
+- **Dias de outro mês são descartados**: o terceiro bloco tem 31 casas mesmo em meses de 30 dias,
+  então pode trazer o dia 1º do mês seguinte — que colidiria com o dia 1º do mês certo.
 - **A equipe não é fixa**: cada aba nova vira uma vendedora no banco automaticamente.
+
+Para conferir o leitor contra uma planilha real:
+
+```bash
+npx tsx scripts/conferirPlanilha.ts "/caminho/AGOSTO VENDAS 2026.xlsx"
+```
+
+Ele imprime os totais lidos ao lado do que a planilha calcula, para comparação direta.
 
 O nome do arquivo define o mês (`JULHO_2026.xlsx`, `AGOSTO_VENDAS_2026.xlsx`). Se não der para
 descobrir, a tela de importação pede o mês antes de salvar.
 
 Reimportar um mês **substitui** os números daquele mês, inclusive correções manuais — a tela
 avisa antes de confirmar.
-
-Para conferir o leitor contra uma planilha real, coloque o arquivo em `planilhas-exemplo/`
-(a pasta é ignorada pelo git) e rode `npx tsx scripts/testarLeitor.ts`.
 
 ## No ar
 
