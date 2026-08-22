@@ -17,29 +17,62 @@ function distancia(a: string, b: string): number {
   return linha[b.length];
 }
 
+export interface VendedoraParaCasar {
+  id: string;
+  sheetName: string;
+  aliases?: string[];
+}
+
 /**
- * Casa o nome respondido no formulário com a vendedora cadastrada. O
- * formulário e as planilhas foram escritos por pessoas diferentes, em momentos
- * diferentes: "Stefanny" no formulário é "STEFANY" nas abas. Sem isso, as
- * respostas dela ficariam órfãs e a nota dela nunca apareceria.
+ * Casa o nome respondido no formulário com a vendedora cadastrada.
+ *
+ * O formulário e as planilhas foram escritos por pessoas diferentes: "Stefanny"
+ * no formulário é "STEFANY" nas abas, e o campo "Outro:" é texto livre, então
+ * aparece de tudo ("Ster", "Stefany B"...). Sem casar esses nomes, as respostas
+ * ficariam órfãs e a nota dela nunca apareceria.
+ *
+ * A ordem é da regra mais segura para a mais tolerante:
+ *   1. nome igual ao da aba da planilha;
+ *   2. apelido cadastrado à mão na Administração — sempre vence a adivinhação;
+ *   3. erro de digitação (uma ou duas letras de diferença);
+ *   4. começo do nome em comum, e só quando UMA única vendedora bate — é o que
+ *      resolve "Ster", curto demais para as regras acima.
  */
 export function casarVendedora(
   nomeNoFormulario: string,
-  vendedoras: Array<{ id: string; sheetName: string }>
-): { id: string; sheetName: string } | null {
+  vendedoras: VendedoraParaCasar[]
+): VendedoraParaCasar | null {
   const alvo = normalize(nomeNoFormulario);
   if (!alvo || alvo === "OUTRO" || alvo.startsWith("(")) return null;
 
   const exata = vendedoras.find((v) => normalize(v.sheetName) === alvo);
   if (exata) return exata;
 
+  const porApelido = vendedoras.find((v) => (v.aliases ?? []).some((a) => normalize(a) === alvo));
+  if (porApelido) return porApelido;
+
   // Só nomes de tamanho parecido, para "Rafaela" não casar com "Mayara".
   const parecidas = vendedoras
     .map((v) => ({ v, d: distancia(alvo, normalize(v.sheetName)) }))
     .filter(({ v, d }) => d <= 2 && Math.abs(normalize(v.sheetName).length - alvo.length) <= 2)
     .sort((a, b) => a.d - b.d);
+  if (parecidas.length > 0) return parecidas[0].v;
 
-  return parecidas.length > 0 ? parecidas[0].v : null;
+  // Começo em comum: exige 3 letras e some na dúvida. Se duas vendedoras
+  // começarem igual, é melhor não adivinhar e deixar a resposta para a loja —
+  // um palpite errado premiaria a pessoa errada no ranking de atendimento.
+  const PREFIXO_MINIMO = 3;
+  if (alvo.length >= PREFIXO_MINIMO) {
+    const porPrefixo = vendedoras.filter((v) => {
+      const nome = normalize(v.sheetName);
+      const comum = Math.min(nome.length, alvo.length);
+      if (comum < PREFIXO_MINIMO) return false;
+      return nome.slice(0, PREFIXO_MINIMO) === alvo.slice(0, PREFIXO_MINIMO);
+    });
+    if (porPrefixo.length === 1) return porPrefixo[0];
+  }
+
+  return null;
 }
 
 /**
@@ -48,7 +81,9 @@ export function casarVendedora(
  * nenhuma venda registrada.
  */
 export async function applySurvey(parsed: ParsedSurvey) {
-  const vendedoras = await prisma.seller.findMany({ select: { id: true, sheetName: true } });
+  const vendedoras = await prisma.seller.findMany({
+    select: { id: true, sheetName: true, aliases: true }
+  });
   const avisos: string[] = [];
   const naoCasados = new Set<string>();
 

@@ -71,11 +71,15 @@ model User {
 /// Uma vendedora = uma aba da planilha. Criada automaticamente na importação
 /// quando o nome da aba ainda não existe (a equipe muda de mês para mês).
 model Seller {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   /// Nome da aba, normalizado em maiúsculas (ex.: "MAYARA").
-  sheetName String   @unique
+  sheetName String @unique
   /// Nome de exibição, editável pelo Administrador (ex.: "Mayara Silva").
   name      String
+
+  /// Outras grafias pelas quais ela aparece na pesquisa de satisfação
+  /// ("Stefanny", "Ster"...). Editável na tela de Administração.
+  aliases   String[] @default([])
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

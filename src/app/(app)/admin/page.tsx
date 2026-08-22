@@ -90,7 +90,13 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
           sellerName: u.seller?.name ?? null,
           canViewFinance: u.canViewFinance
         }))}
-        sellers={sellers.map((s) => ({ id: s.id, name: s.name, sheetName: s.sheetName, active: s.active }))}
+        sellers={sellers.map((s) => ({
+          id: s.id,
+          name: s.name,
+          sheetName: s.sheetName,
+          active: s.active,
+          aliases: s.aliases
+        }))}
       />
     </div>
   );

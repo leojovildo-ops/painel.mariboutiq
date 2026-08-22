@@ -7,7 +7,9 @@ import { forbidden, handleError, jsonError, unauthorized } from "@/lib/apiError"
 const schema = z.object({
   /** Nome de exibição; o nome da aba da planilha (sheetName) nunca muda aqui. */
   name: z.string().min(2).optional(),
-  active: z.boolean().optional()
+  active: z.boolean().optional(),
+  /** Grafias alternativas usadas na pesquisa de satisfação. */
+  aliases: z.array(z.string().min(2).max(40)).max(12).optional()
 });
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -22,7 +24,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const body = schema.parse(await request.json());
     await prisma.seller.update({
       where: { id: seller.id },
-      data: { name: body.name?.trim(), active: body.active }
+      data: {
+        name: body.name?.trim(),
+        active: body.active,
+        aliases: body.aliases?.map((a) => a.trim()).filter(Boolean)
+      }
     });
 
     // Desativar a vendedora tira também o acesso do login dela ao painel.

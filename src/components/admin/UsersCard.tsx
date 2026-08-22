@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ApelidosVendedora } from "./ApelidosVendedora";
 
 type Role = "ADMIN" | "SUPERVISORA" | "VENDEDORA";
 
@@ -27,6 +28,7 @@ interface SellerRow {
   name: string;
   sheetName: string;
   active: boolean;
+  aliases: string[];
 }
 
 function NewUserForm({ sellers, onDone }: { sellers: SellerRow[]; onDone: () => void }) {
@@ -249,21 +251,18 @@ export function UsersCard({
       </div>
 
       {sellers.length > 0 && (
-        <div className="card p-4">
-          <p className="label mb-3">Vendedoras vindas das planilhas</p>
-          <ul className="flex flex-wrap gap-2">
+        <div className="card p-5">
+          <p className="font-display text-lg font-bold text-creme">Vendedoras e a pesquisa</p>
+          <p className="mb-2 mt-1 text-sm text-creme-500">
+            As vendedoras vêm das abas das planilhas. Se na pesquisa de satisfação o nome dela aparece
+            escrito de outro jeito, cadastre aqui separado por vírgula — o sistema já resolve sozinho erro
+            de digitação e apelido que começa igual, mas o resto precisa desta lista.
+          </p>
+          <div>
             {sellers.map((seller) => (
-              <li
-                key={seller.id}
-                className={`rounded-full border px-3 py-1 text-sm ${
-                  seller.active ? "border-base-600 text-creme-300" : "border-base-600/50 text-creme-700"
-                }`}
-              >
-                {seller.name}
-                <span className="ml-1.5 text-xs text-creme-700">aba {seller.sheetName}</span>
-              </li>
+              <ApelidosVendedora key={seller.id} seller={seller} />
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </section>
