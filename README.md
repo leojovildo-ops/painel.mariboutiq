@@ -50,14 +50,20 @@ em Administração → Acessos da equipe → Nova senha.
 ## Banco de dados
 
 Projeto Supabase: `painel-mariboutique-360` (região `sa-east-1`, plano free).
-A migration inicial já foi aplicada. Pegue a senha do banco em
-**Supabase → Project Settings → Database** e monte a `DATABASE_URL` como no `.env.example`.
+A migration inicial já está aplicada e registrada na tabela de controle do Prisma.
 
-Na Vercel, use o **Transaction Pooler** (IPv4): a conexão direta `db.<ref>.supabase.co` só
-resolve em IPv6 e as funções serverless não conectam nela.
+O app **não usa o usuário `postgres`**: existe um login dedicado, `painel_app`, criado direto no
+Postgres. Assim a senha do administrador do banco não precisa circular. Ele não é dono das
+tabelas, então o acesso vem de privilégios de tabela + uma policy de RLS por tabela restrita a
+esse papel. Os papéis `anon` e `authenticated` continuam **sem policy nenhuma**, ou seja, a API
+pública do Supabase segue fechada — o único caminho até os dados é o app.
 
-Todas as tabelas estão com RLS habilitado e nenhuma policy — a API pública do Supabase fica
-fechada e o acesso acontece só pelo app, via Prisma.
+A conexão usa o **Transaction Pooler** (IPv4), que funciona na Vercel. A conexão direta
+`db.<ref>.supabase.co` só resolve em IPv6 e as funções serverless não conectam nela.
+
+⚠️ **Migrations não passam pelo pooler.** A porta 6543 é modo transação e o motor de migration
+do Prisma trava nela. Para rodar `prisma migrate`, aponte `DATABASE_URL` temporariamente para a
+conexão direta (porta 5432), que funciona de uma máquina com IPv6.
 
 ## Como as planilhas são lidas
 
@@ -94,11 +100,27 @@ avisa antes de confirmar.
 Para conferir o leitor contra uma planilha real, coloque o arquivo em `planilhas-exemplo/`
 (a pasta é ignorada pelo git) e rode `npx tsx scripts/testarLeitor.ts`.
 
-## Deploy (Vercel)
+## No ar
 
-1. Suba o repositório e importe o projeto na Vercel.
-2. Variáveis de ambiente: `DATABASE_URL` (pooler), `NEXTAUTH_URL` (URL final) e `NEXTAUTH_SECRET`.
-3. O `build` já roda `prisma generate`. Rode `npx prisma migrate deploy` uma vez apontando para o banco.
+**https://painel-mariboutique-360.vercel.app** — projeto `mariboutiq/painel-mariboutique-360` na Vercel.
+
+As três variáveis já estão salvas no projeto (production, preview e development):
+`DATABASE_URL`, `NEXTAUTH_SECRET` e `NEXTAUTH_URL`.
+
+Para publicar uma nova versão:
+
+```bash
+npx vercel deploy --prod
+```
+
+Dois detalhes que custaram caro e é bom não reintroduzir:
+
+- **`NEXTAUTH_URL` precisa ser o domínio fixo** (`painel-mariboutique-360.vercel.app`). Sem ele,
+  o NextAuth cai no `VERCEL_URL`, que é o endereço único de cada build — o login responde
+  401 mesmo com a senha certa, porque o host do cookie não bate com o host acessado.
+- **Não existe `middleware.ts`.** No Next 14 ele só roda no runtime Edge, que os deploys
+  anônimos recusam. A proteção de verdade é server-side (`requireUser`/`requireAdmin` nos
+  layouts e `apiUser` nas rotas) — veja `src/app/(app)/README-protecao.md`.
 
 ## Fora do escopo desta fase
 
