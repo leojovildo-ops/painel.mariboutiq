@@ -29,6 +29,11 @@ export default async function NiveisPage({ searchParams }: { searchParams: { mes
     return rank(b.level.current) - rank(a.level.current) || b.revenue - a.revenue;
   });
 
+  // A meta Prata vem em branco na planilha de alguns meses (a célula J23).
+  // Sem avisar, o selo Prata simplesmente nunca aparece e ninguém entende por quê.
+  const semPrata =
+    ranked.length > 0 && ranked.every((r) => !r.level.goals.some((g) => g.level === "PRATA"));
+
   return (
     <div className="space-y-6">
       <header>
@@ -39,6 +44,14 @@ export default async function NiveisPage({ searchParams }: { searchParams: { mes
       </header>
 
       <MonthSelector months={periods} current={period.slug} />
+
+      {semPrata && (
+        <p className="rounded-xl border border-nivel-ouro/30 bg-nivel-ouro/10 px-4 py-3 text-sm text-nivel-ouro">
+          A meta <strong>Prata</strong> está em branco na planilha deste mês, então o nível Prata não
+          aparece para ninguém. Para ativá-lo, preencha o valor da Prata na coluna J, ao lado do rótulo,
+          em cada aba.
+        </p>
+      )}
 
       {ranked.length === 0 ? (
         <div className="card p-8 text-center text-sm text-creme-500">
@@ -57,7 +70,16 @@ export default async function NiveisPage({ searchParams }: { searchParams: { mes
                 className={`card p-5 sm:p-6 ${highlighted ? "border-coral/70 shadow-glow" : ""}`}
               >
                 <div className="flex items-center gap-5">
-                  <LevelBadge level={level.current} size="lg" />
+                  <div className="flex shrink-0 flex-col items-center gap-1.5">
+                    <LevelBadge level={level.current} size="lg" />
+                    {/* Sem nível conquistado, o número que importa é o quanto
+                        falta para o próximo — e não um selo vazio. */}
+                    {!level.current && level.percentOfNext != null && (
+                      <span className="num text-sm font-bold text-coral-300">
+                        {percent(level.percentOfNext)}
+                      </span>
+                    )}
+                  </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -74,9 +96,9 @@ export default async function NiveisPage({ searchParams }: { searchParams: { mes
                     <p className="mt-0.5 text-xs text-creme-700">
                       {level.current
                         ? `Nível ${LEVEL_LABEL[level.current]} conquistado`
-                        : level.goals.length > 0
-                          ? "Ainda a caminho do primeiro nível"
-                          : "Sem metas cadastradas neste mês"}
+                        : level.next
+                          ? `A caminho do ${LEVEL_LABEL[level.next]}`
+                          : "Sem metas na planilha deste mês"}
                     </p>
                   </div>
                 </div>
@@ -86,7 +108,7 @@ export default async function NiveisPage({ searchParams }: { searchParams: { mes
                     <div className="mb-2 flex items-baseline justify-between gap-3">
                       <span className="label">Próximo nível · {LEVEL_LABEL[level.next]}</span>
                       <span className="num text-xs text-creme-500">
-                        faltam {money(level.remaining)} de {money(level.nextTarget)}
+                        {percent(level.percentOfNext)} da meta · faltam {money(level.remaining)}
                       </span>
                     </div>
                     <ProgressBar value={level.progress} tone={tone} size="md" />

@@ -28,6 +28,12 @@ export interface LevelProgress {
   remaining: number | null;
   /** 0-100, progresso até o próximo nível (100 quando não há próximo). */
   progress: number;
+  /**
+   * Faturamento dividido pela meta do próximo nível, em %. É a coluna K da
+   * planilha, e é o número que a equipe usa para saber o quanto falta —
+   * diferente de `progress`, que mede só o trecho entre um nível e o outro.
+   */
+  percentOfNext: number | null;
   /** % do faturamento sobre a meta do nível atual/próximo, como na coluna K. */
   goals: LevelGoal[];
 }
@@ -38,7 +44,10 @@ export function computeLevel(revenue: number, goals: LevelGoal[]): LevelProgress
     .sort((a, b) => a.target - b.target);
 
   if (sorted.length === 0) {
-    return { current: null, next: null, nextTarget: null, remaining: null, progress: 0, goals: sorted };
+    return {
+      current: null, next: null, nextTarget: null, remaining: null,
+      progress: 0, percentOfNext: null, goals: sorted
+    };
   }
 
   const reached = sorted.filter((g) => revenue >= g.target);
@@ -46,7 +55,10 @@ export function computeLevel(revenue: number, goals: LevelGoal[]): LevelProgress
   const upcoming = sorted.find((g) => revenue < g.target) ?? null;
 
   if (!upcoming) {
-    return { current, next: null, nextTarget: null, remaining: null, progress: 100, goals: sorted };
+    return {
+      current, next: null, nextTarget: null, remaining: null,
+      progress: 100, percentOfNext: null, goals: sorted
+    };
   }
 
   // A barra mede o trecho entre o nível já conquistado e o próximo, para que
@@ -61,6 +73,7 @@ export function computeLevel(revenue: number, goals: LevelGoal[]): LevelProgress
     nextTarget: upcoming.target,
     remaining: Math.max(0, upcoming.target - revenue),
     progress,
+    percentOfNext: (revenue / upcoming.target) * 100,
     goals: sorted
   };
 }
