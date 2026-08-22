@@ -176,7 +176,10 @@ function findBlocks(sheet: XLSX.WorkSheet, lastCol: number): Bloco[] {
     const fim = i + 1 < inicios.length ? inicios[i + 1] - 2 : lastCol;
     const cols: Record<string, number> = {};
     for (let col = inicio; col <= fim; col++) {
-      const label = normalize(text(sheet, col, HEADER_ROW));
+      // Algumas planilhas chamam o canal da loja física de "SALÃO" e outras de
+      // "LOJA"; é a mesma coluna, e o painel trata as duas como uma só.
+      const bruto = normalize(text(sheet, col, HEADER_ROW));
+      const label = bruto === "LOJA" ? "SALAO" : bruto;
       if (label && !(label in cols)) cols[label] = col;
     }
     // A coluna da data é a que vem imediatamente antes de "Faturamento".
@@ -331,9 +334,10 @@ function parseSheet(
   const salao = temSalao ? soma((d) => d.salao) : null;
   const online = temOnline ? soma((d) => d.online) : null;
 
-  if (!temSalao || !temOnline) {
-    warnings.push(`Aba "${sheetName}": sem colunas SALÃO/ONLINE — gravado como "sem dado".`);
-  }
+  // A ausência de SALÃO/ONLINE não é um problema a ser reportado: várias abas
+  // simplesmente não separam os canais, e o faturamento delas vem inteiro da
+  // coluna "Faturamento", que é o número que vale. Os canais ficam apenas como
+  // não informados.
 
   // Conferência contra o "Total Mês" que a própria planilha calcula.
   const totalMes = valueByLabel(sheet, (l) => l.startsWith("TOTAL MES"), lastCol);

@@ -136,6 +136,13 @@ Nada é lido por endereço fixo de célula:
   vira aviso na tela de conferência, não erro.
 - **`#DIV/0!` e demais erros do Excel viram "sem dado"**, nunca zero. TKM e PA são recalculados
   quando a planilha traz erro.
+- **O faturamento sai sempre da coluna `Faturamento`.** A divisão por canal é opcional: a coluna da
+  loja física aparece ora como `SALÃO`, ora como `LOJA` (são tratadas como a mesma), e várias abas
+  não têm essa divisão nenhuma — a da Tilia, por exemplo. Nesse caso os canais ficam como não
+  informados, sem aviso: o número que vale continua vindo da coluna `Faturamento`.
+- **Linha com valores mas sem data preenchida é recuperada**, e a tela diz qual linha e qual dia foi
+  assumido. Só vale para linhas no meio dos dias já datados do bloco — fora disso, a linha de totais
+  do bloco seria contada como um dia e o mês dobraria.
 - **Dias de outro mês são descartados**: o terceiro bloco tem 31 casas mesmo em meses de 30 dias,
   então pode trazer o dia 1º do mês seguinte — que colidiria com o dia 1º do mês certo.
 - **A equipe não é fixa**: cada aba nova vira uma vendedora no banco automaticamente.
