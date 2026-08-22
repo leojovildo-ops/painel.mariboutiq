@@ -14,16 +14,24 @@ const VENDAS: NavItem[] = [
   { href: "/metas", label: "Metas da Loja" },
   { href: "/ranking", label: "Ranking de Vendas" },
   { href: "/niveis", label: "Ranking de Nível" },
+  { href: "/ranking-ano", label: "Ranking do Ano" },
   { href: "/admin", label: "Administração", adminOnly: true }
 ];
 
-/**
- * Os módulos abaixo ainda não existem — aparecem desativados só para deixar
- * claro onde entram (financeiro etc.) quando forem contratados numa fase futura.
- */
-const EM_BREVE = ["Financeiro", "Estoque"];
+const FINANCEIRO: NavItem[] = [{ href: "/financeiro", label: "Dashboard" }];
 
-export function Nav({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
+/** Módulo que ainda não existe; fica visível para marcar o lugar dele. */
+const EM_BREVE = ["Estoque"];
+
+export function Nav({
+  role,
+  canViewFinance,
+  onNavigate
+}: {
+  role: Role;
+  canViewFinance: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const items = VENDAS.filter((item) => !item.adminOnly || role === "ADMIN");
 
@@ -53,6 +61,35 @@ export function Nav({ role, onNavigate }: { role: Role; onNavigate?: () => void 
           })}
         </ul>
       </div>
+
+      {/* Financeiro só aparece para quem tem o direito liberado, e o direito
+          é por pessoa: ser Administrador não basta. */}
+      {canViewFinance && (
+        <div>
+          <p className="label mb-2 px-3">Financeiro</p>
+          <ul className="space-y-1">
+            {FINANCEIRO.map((item) => {
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    className={`block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-coral/15 text-coral-300 shadow-[inset_0_0_0_1px_rgba(228,113,78,0.3)]"
+                        : "text-creme-500 hover:bg-base-700/60 hover:text-creme"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <div>
         <p className="label mb-2 px-3">Em breve</p>

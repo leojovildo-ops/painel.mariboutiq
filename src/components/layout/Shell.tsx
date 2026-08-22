@@ -16,11 +16,13 @@ export function Shell({
   role,
   name,
   greeting,
+  canViewFinance,
   children
 }: {
   role: Role;
   name: string;
   greeting: string;
+  canViewFinance: boolean;
   children: React.ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -51,7 +53,7 @@ export function Shell({
           <Wordmark />
         </div>
 
-        <Nav role={role} onNavigate={() => setMenuOpen(false)} />
+        <Nav role={role} canViewFinance={canViewFinance} onNavigate={() => setMenuOpen(false)} />
 
         <div className="mt-8 border-t border-base-600/60 pt-5 lg:absolute lg:bottom-7 lg:left-5 lg:right-5 lg:mt-0">
           <p className="text-sm font-semibold text-creme">{name}</p>

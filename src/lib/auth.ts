@@ -30,7 +30,8 @@ export const authOptions: AuthOptions = {
             name: user.name,
             email: user.email,
             role: user.role,
-            sellerId: user.sellerId
+            sellerId: user.sellerId,
+            canViewFinance: user.canViewFinance
           };
         } catch (error) {
           // Sem este log, uma falha de conexão com o banco vira o mesmo
@@ -48,6 +49,7 @@ export const authOptions: AuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.sellerId = user.sellerId;
+        token.canViewFinance = user.canViewFinance;
       }
       return token;
     },
@@ -56,6 +58,7 @@ export const authOptions: AuthOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.sellerId = token.sellerId;
+        session.user.canViewFinance = token.canViewFinance;
       }
       return session;
     }

@@ -10,7 +10,8 @@ const schema = z.object({
   role: z.enum(["ADMIN", "SUPERVISORA", "VENDEDORA"]).optional(),
   active: z.boolean().optional(),
   password: z.string().min(8, "A senha precisa ter ao menos 8 caracteres.").optional(),
-  sellerId: z.string().nullable().optional()
+  sellerId: z.string().nullable().optional(),
+  canViewFinance: z.boolean().optional()
 });
 
 /** Editar, redefinir senha ou desativar um login. Logins nunca são apagados,
@@ -43,7 +44,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         role: body.role,
         active: body.active,
         passwordHash: body.password ? await bcrypt.hash(body.password, 10) : undefined,
-        sellerId: role === "VENDEDORA" ? (body.sellerId ?? target.sellerId) : null
+        sellerId: role === "VENDEDORA" ? (body.sellerId ?? target.sellerId) : null,
+        // Só quem já enxerga o financeiro pode dar esse acesso a outra pessoa.
+        canViewFinance:
+          body.canViewFinance !== undefined && admin.canViewFinance ? body.canViewFinance : undefined
       }
     });
 

@@ -11,6 +11,8 @@ declare module "next-auth" {
       role: Role;
       /** Preenchido só para VENDEDORA: usado para destacar a própria linha no ranking. */
       sellerId: string | null;
+      /** Direito por pessoa (não por perfil) de ver o módulo financeiro. */
+      canViewFinance: boolean;
     };
   }
 
@@ -20,6 +22,7 @@ declare module "next-auth" {
     email: string;
     role: Role;
     sellerId: string | null;
+    canViewFinance: boolean;
   }
 }
 
@@ -28,5 +31,6 @@ declare module "next-auth/jwt" {
     id: string;
     role: Role;
     sellerId: string | null;
+    canViewFinance: boolean;
   }
 }

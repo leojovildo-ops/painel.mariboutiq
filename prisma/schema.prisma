@@ -37,6 +37,12 @@ enum ImportStatus {
   DISCARDED
 }
 
+/// Uma planilha de vendas (uma por mes) ou a planilha de despesas (o ano todo).
+enum ImportKind {
+  SALES
+  EXPENSES
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -50,6 +56,11 @@ model User {
   /// Só para o perfil VENDEDORA: liga o login à aba da planilha.
   sellerId String? @unique
   seller   Seller? @relation(fields: [sellerId], references: [id])
+
+  /// Acesso ao módulo financeiro. É um direito por pessoa, e não por perfil:
+  /// hoje só o diretor de operações e a CEO têm, e um Administrador novo
+  /// NÃO passa a ver os números da empresa só por ser Administrador.
+  canViewFinance Boolean @default(false)
 
   imports     ImportBatch[]
   editedStats MonthlyStats[] @relation("StatsEditedBy")
@@ -81,8 +92,10 @@ model Period {
   year  Int
   month Int
 
-  stats   MonthlyStats[]
-  imports ImportBatch[]
+  stats    MonthlyStats[]
+  imports  ImportBatch[]
+  expenses Expense[]
+  finance  FinanceMonth?
 
   @@unique([year, month])
   @@map("periods")
@@ -90,6 +103,8 @@ model Period {
 
 model ImportBatch {
   id            String       @id @default(cuid())
+  /// Planilha de vendas (uma por mes) ou a planilha de despesas do ano.
+  kind          ImportKind   @default(SALES)
   fileName      String
   status        ImportStatus @default(PENDING)
   /// Prévia extraída do arquivo, mostrada para conferência antes de salvar.
@@ -177,4 +192,44 @@ model DailyEntry {
 
   @@unique([statsId, day])
   @@map("daily_entries")
+}
+
+/// Um lançamento de despesa, como está nas abas mensais (JAN..DEZ) da planilha
+/// de despesas: uma linha por conta. Visível só para quem tem `canViewFinance`.
+model Expense {
+  id          String    @id @default(cuid())
+  periodId    String
+  period      Period    @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  /// GRUPO: Impostos, Custos Fixos, Custos Variáveis, Despesas Funcionário,
+  /// Despesas Pessoal dos Sócios, Fornecedor. Vem da planilha, não é fixo aqui.
+  group       String
+  description String
+  docType     String?
+  dueDate     DateTime?
+  amount      Decimal   @db.Decimal(12, 2)
+  paidAt      DateTime?
+  balance     Decimal?  @db.Decimal(12, 2)
+  /// Linha de origem na aba, para conferir contra a planilha quando divergir.
+  sourceRow   Int
+  createdAt   DateTime  @default(now())
+
+  @@index([periodId])
+  @@index([periodId, group])
+  @@map("expenses")
+}
+
+/// Numeros do mes que vem da planilha de DESPESAS (aba "RESUMO DESPESAS ANO").
+/// Fica separado de MonthlyStats de proposito: aquele e a verdade das vendas,
+/// vinda das planilhas mensais de vendas, e nao pode ser sobrescrito pela
+/// planilha financeira. O painel usa o faturamento das vendas quando o mes ja
+/// foi importado, e cai para este aqui quando ainda nao foi.
+model FinanceMonth {
+  id           String   @id @default(cuid())
+  periodId     String   @unique
+  period       Period   @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  grossRevenue Decimal? @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("finance_months")
 }

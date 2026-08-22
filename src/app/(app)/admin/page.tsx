@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { listPeriods, resolvePeriod } from "@/lib/data/months";
 import { periodLabel } from "@/lib/format";
 import { UploadCard } from "@/components/admin/UploadCard";
+import { UploadDespesasCard } from "@/components/admin/UploadDespesasCard";
 import { EditStatsCard } from "@/components/admin/EditStatsCard";
 import { UsersCard } from "@/components/admin/UsersCard";
 import { MonthSelector } from "@/components/ui/MonthSelector";
@@ -12,7 +13,7 @@ export const metadata: Metadata = { title: "Administração · Painel Mariboutiq
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage({ searchParams }: { searchParams: { mes?: string } }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const periods = await listPeriods();
   const period = resolvePeriod(periods, searchParams.mes);
@@ -39,6 +40,8 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
       </header>
 
       <UploadCard />
+
+      {admin.canViewFinance && <UploadDespesasCard />}
 
       <section className="space-y-4">
         <div>
@@ -71,6 +74,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
       </section>
 
       <UsersCard
+        podeGerirFinanceiro={admin.canViewFinance}
         users={users.map((u) => ({
           id: u.id,
           name: u.name,
@@ -78,7 +82,8 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
           role: u.role,
           active: u.active,
           sellerId: u.sellerId,
-          sellerName: u.seller?.name ?? null
+          sellerName: u.seller?.name ?? null,
+          canViewFinance: u.canViewFinance
         }))}
         sellers={sellers.map((s) => ({ id: s.id, name: s.name, sheetName: s.sheetName, active: s.active }))}
       />

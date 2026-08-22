@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { computeLevel, type LevelProgress } from "@/lib/levels";
+import { computeLevel, type GoalLevelName, type LevelProgress } from "@/lib/levels";
 
 /** Prisma devolve Decimal; as telas trabalham com number | null ("sem dado"). */
 function toNumber(value: Prisma.Decimal | null): number | null {
@@ -116,4 +116,110 @@ export async function getStoreMonth(periodId: string): Promise<StoreRow | null> 
       stats.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
     )
   };
+}
+
+export interface MesDaVendedora {
+  month: number;
+  revenue: number;
+  level: GoalLevelName | null;
+}
+
+export interface LinhaAnual {
+  sellerId: string;
+  name: string;
+  active: boolean;
+  /** Quantos meses ela bateu cada nível no ano. */
+  prata: number;
+  ouro: number;
+  diamante: number;
+  /** Meses em que bateu pelo menos a primeira meta. */
+  mesesComMeta: number;
+  /** Meses com dado importado (ela pode ter entrado no meio do ano). */
+  mesesTrabalhados: number;
+  revenue: number;
+  meses: MesDaVendedora[];
+  position: number;
+}
+
+/** Anos que já têm venda importada. */
+export async function listSalesYears(): Promise<number[]> {
+  const periods = await prisma.period.findMany({
+    where: { stats: { some: {} } },
+    select: { year: true },
+    distinct: ["year"],
+    orderBy: { year: "desc" }
+  });
+  return periods.map((p) => p.year);
+}
+
+/**
+ * Ranking do ano por metas batidas. A ordem é Diamante, depois Ouro, depois
+ * Prata e só então faturamento: premia consistência, e não um único mês
+ * excepcional. Quem entrou no meio do ano não é penalizada por isso na
+ * contagem — o número de meses trabalhados aparece ao lado para dar contexto.
+ */
+export async function getAnnualRanking(year: number): Promise<LinhaAnual[]> {
+  const stats = await prisma.monthlyStats.findMany({
+    where: { scope: "SELLER", period: { year } },
+    include: { seller: true, goals: true, period: true }
+  });
+
+  const porVendedora = new Map<string, LinhaAnual>();
+
+  for (const s of stats) {
+    if (!s.seller) continue;
+
+    const linha =
+      porVendedora.get(s.seller.id) ??
+      ({
+        sellerId: s.seller.id,
+        name: s.seller.name,
+        active: s.seller.active,
+        prata: 0,
+        ouro: 0,
+        diamante: 0,
+        mesesComMeta: 0,
+        mesesTrabalhados: 0,
+        revenue: 0,
+        meses: [],
+        position: 0
+      } as LinhaAnual);
+
+    const revenue = Number(s.revenue);
+    const nivel = computeLevel(
+      revenue,
+      s.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+    ).current;
+
+    // Os níveis são cumulativos: bater Diamante significa ter passado por
+    // Prata e Ouro, e o placar do ano precisa refletir isso.
+    if (nivel === "DIAMANTE") {
+      linha.diamante += 1;
+      linha.ouro += 1;
+      linha.prata += 1;
+    } else if (nivel === "OURO") {
+      linha.ouro += 1;
+      linha.prata += 1;
+    } else if (nivel === "PRATA") {
+      linha.prata += 1;
+    }
+    if (nivel) linha.mesesComMeta += 1;
+
+    linha.mesesTrabalhados += 1;
+    linha.revenue += revenue;
+    linha.meses.push({ month: s.period.month, revenue, level: nivel });
+
+    porVendedora.set(s.seller.id, linha);
+  }
+
+  const linhas = Array.from(porVendedora.values());
+  for (const l of linhas) l.meses.sort((a, b) => a.month - b.month);
+
+  linhas.sort(
+    (a, b) =>
+      b.diamante - a.diamante || b.ouro - a.ouro || b.prata - a.prata || b.revenue - a.revenue
+  );
+  linhas.forEach((l, i) => (l.position = i + 1));
+
+  return linhas;
 }

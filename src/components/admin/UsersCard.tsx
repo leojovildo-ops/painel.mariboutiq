@@ -19,6 +19,7 @@ interface UserRow {
   active: boolean;
   sellerId: string | null;
   sellerName: string | null;
+  canViewFinance: boolean;
 }
 
 interface SellerRow {
@@ -140,7 +141,16 @@ function NewUserForm({ sellers, onDone }: { sellers: SellerRow[]; onDone: () => 
   );
 }
 
-export function UsersCard({ users, sellers }: { users: UserRow[]; sellers: SellerRow[] }) {
+export function UsersCard({
+  users,
+  sellers,
+  podeGerirFinanceiro
+}: {
+  users: UserRow[];
+  sellers: SellerRow[];
+  /** Só quem já vê o financeiro pode liberar esse acesso a outra pessoa. */
+  podeGerirFinanceiro: boolean;
+}) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -199,6 +209,11 @@ export function UsersCard({ users, sellers }: { users: UserRow[]; sellers: Selle
                   {user.email} · {ROLE_LABEL[user.role]}
                   {user.sellerName ? ` · ${user.sellerName}` : ""}
                 </p>
+                {user.canViewFinance && (
+                  <span className="mt-1 inline-block rounded-full border border-emerald-500/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                    Vê o financeiro
+                  </span>
+                )}
               </div>
               <div className="flex gap-2">
                 <button
@@ -209,6 +224,16 @@ export function UsersCard({ users, sellers }: { users: UserRow[]; sellers: Selle
                 >
                   Nova senha
                 </button>
+                {podeGerirFinanceiro && user.role === "ADMIN" && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={busyId === user.id}
+                    onClick={() => patchUser(user.id, { canViewFinance: !user.canViewFinance })}
+                  >
+                    {user.canViewFinance ? "Tirar financeiro" : "Dar financeiro"}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn-secondary"

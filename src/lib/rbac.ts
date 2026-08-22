@@ -8,6 +8,7 @@ export interface SessionUser {
   email: string;
   role: Role;
   sellerId: string | null;
+  canViewFinance: boolean;
 }
 
 /** Exige sessão em páginas do app; sem sessão, volta para o login. */
@@ -21,6 +22,17 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (user.role !== "ADMIN") redirect("/ranking");
+  return user;
+}
+
+/**
+ * Módulo financeiro. O direito é por pessoa, e não por perfil: um
+ * Administrador novo NÃO passa a ver os números da empresa só por ser
+ * Administrador — alguém precisa liberar o acesso para ele.
+ */
+export async function requireFinance(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!user.canViewFinance) redirect("/ranking");
   return user;
 }
 
