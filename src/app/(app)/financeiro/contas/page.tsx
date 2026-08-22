@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireFinance } from "@/lib/rbac";
 import { anosComPeriodo, getSaldosDoAno, listarContas } from "@/lib/data/saldos";
+import { getFinanceYear } from "@/lib/data/finance";
 import { money } from "@/lib/format";
 import { StatCard } from "@/components/ui/StatCard";
 import { SaldosDoMes } from "@/components/financeiro/SaldosDoMes";
+import { EspecieParaCompras } from "@/components/financeiro/EspecieParaCompras";
 
 export const metadata: Metadata = { title: "Saldos das Contas · Painel Mariboutique 360" };
 export const dynamic = "force-dynamic";
@@ -28,6 +30,26 @@ export default async function ContasPage({ searchParams }: { searchParams: { ano
   const ultimo = [...comDado].reverse().find((m) => m.totalFim != null);
   const variacaoAno =
     primeiro?.totalInicio != null && ultimo?.totalFim != null ? ultimo.totalFim - primeiro.totalInicio : null;
+
+  // O dinheiro em espécie é o que paga a mercadoria, então ele é comparado com
+  // o que a loja gasta com fornecedor por mês.
+  const contaEspecie = contas.find((c) => c.kind === "ESPECIE");
+  const mesEspecie = contaEspecie
+    ? [...meses].reverse().find((m) => m.saldos.find((s) => s.accountId === contaEspecie.id)?.closing != null)
+    : undefined;
+  const saldoEspecie = contaEspecie && mesEspecie
+    ? (mesEspecie.saldos.find((s) => s.accountId === contaEspecie.id)?.closing ?? null)
+    : null;
+
+  const financeiro = await getFinanceYear(ano);
+  const comprasPorMes = financeiro
+    .filter((m) => !m.emAndamento)
+    .map((m) => m.groups.find((g) => g.group === "FORNECEDOR")?.total ?? 0)
+    .filter((valor) => valor > 0);
+  const mediaCompras =
+    comprasPorMes.length > 0
+      ? comprasPorMes.reduce((a, b) => a + b, 0) / comprasPorMes.length
+      : null;
 
   return (
     <div className="space-y-6">
@@ -56,6 +78,15 @@ export default async function ContasPage({ searchParams }: { searchParams: { ano
           ))}
         </div>
       </header>
+
+      {contaEspecie && (
+        <EspecieParaCompras
+          saldo={saldoEspecie}
+          mesDoSaldo={mesEspecie?.month ?? null}
+          mediaCompras={mediaCompras}
+          mesesConsiderados={comprasPorMes.length}
+        />
+      )}
 
       <section className="grid gap-4 sm:grid-cols-3">
         <StatCard
