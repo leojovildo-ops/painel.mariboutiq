@@ -15,7 +15,9 @@ const schema = z.object({
   tkm: optionalNumber.optional(),
   salao: optionalNumber.optional(),
   online: optionalNumber.optional(),
-  projection: optionalNumber.optional()
+  projection: optionalNumber.optional(),
+  /** Observação do mês. String vazia apaga. */
+  note: z.string().max(500).nullable().optional()
 });
 
 /** Correção manual de qualquer número já importado — só Administrador. */
@@ -51,6 +53,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         salao: body.salao !== undefined ? body.salao : stats.salao,
         online: body.online !== undefined ? body.online : stats.online,
         projection: body.projection !== undefined ? body.projection : stats.projection,
+        note: body.note !== undefined ? (body.note?.trim() || null) : stats.note,
         editedAt: new Date(),
         editedById: user.id
       }

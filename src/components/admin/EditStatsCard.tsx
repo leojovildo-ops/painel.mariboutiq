@@ -14,6 +14,7 @@ export interface EditableRow {
   pa: number | null;
   tkm: number | null;
   projection: number | null;
+  note: string | null;
   editedAt: string | null;
 }
 
@@ -49,7 +50,8 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
     pieces: String(row.pieces),
     pa: row.pa == null ? "" : String(row.pa),
     tkm: row.tkm == null ? "" : String(row.tkm),
-    projection: row.projection == null ? "" : String(row.projection)
+    projection: row.projection == null ? "" : String(row.projection),
+    note: row.note ?? ""
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,8 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
         pieces: Math.round(toValue(form.pieces) ?? 0),
         pa: toValue(form.pa),
         tkm: toValue(form.tkm),
-        projection: toValue(form.projection)
+        projection: toValue(form.projection),
+        note: form.note
       })
     });
 
@@ -94,6 +97,20 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
           <Field label="Projeção" value={form.projection} onChange={(v) => setForm({ ...form, projection: v })} />
         )}
       </div>
+
+      <label className="mt-4 block">
+        <span className="label mb-1 block">Observação do mês</span>
+        <textarea
+          className="input min-h-[4.5rem] resize-y"
+          maxLength={500}
+          placeholder="Ex.: mês soma o período de experiência com o de carteira assinada."
+          value={form.note}
+          onChange={(e) => setForm({ ...form, note: e.target.value })}
+        />
+        <span className="mt-1 block text-xs text-creme-700">
+          Aparece no ranking e na tela de níveis, junto do nome.
+        </span>
+      </label>
 
       {error && <p className="mt-3 text-sm text-coral-300">{error}</p>}
 
@@ -129,6 +146,7 @@ export function EditStatsCard({ rows }: { rows: EditableRow[] }) {
                   {money(row.revenue)} · {integer(row.salesCount)} vendas · {integer(row.pieces)} peças · P.A.{" "}
                   {decimal(row.pa)} · TKM {money(row.tkm)}
                 </p>
+                {row.note && <p className="mt-1 text-xs text-creme-500">{row.note}</p>}
                 {row.editedAt && (
                   <p className="mt-0.5 text-xs text-creme-700">Corrigido manualmente</p>
                 )}

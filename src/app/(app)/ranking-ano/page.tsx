@@ -105,18 +105,31 @@ export default async function RankingAnoPage({ searchParams }: { searchParams: {
                 <div className="mt-4 flex flex-wrap gap-1.5 border-t border-base-600/50 pt-4">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
                     const mes = linha.meses.find((x) => x.month === m);
-                    const cor = mes?.level ? CORES_NIVEL[mes.level] : mes ? "bg-base-600" : "bg-base-700/50";
+
+                    // Mês sem planilha importada leva um X vermelho: é falta de
+                    // dado, e não um mês fraco — a diferença precisa saltar aos olhos.
+                    if (!mes) {
+                      return (
+                        <span
+                          key={m}
+                          className="flex h-7 w-9 flex-col items-center justify-center rounded border border-coral/40 bg-coral/10 text-[9px] font-semibold leading-none text-coral"
+                          title={`${monthName(m)}: planilha ainda não importada`}
+                        >
+                          <span className="text-[11px] leading-none">✕</span>
+                          <span className="mt-0.5 opacity-80">{monthName(m).slice(0, 3)}</span>
+                        </span>
+                      );
+                    }
+
                     return (
                       <span
                         key={m}
-                        className={`flex h-7 w-9 items-center justify-center rounded text-[10px] font-semibold ${cor} ${
-                          mes?.level ? "text-base" : "text-creme-700"
+                        className={`flex h-7 w-9 items-center justify-center rounded text-[10px] font-semibold ${
+                          mes.level ? `${CORES_NIVEL[mes.level]} text-base` : "bg-base-600 text-creme-700"
                         }`}
-                        title={
-                          mes
-                            ? `${monthName(m)}: ${money(mes.revenue)}${mes.level ? ` · ${LEVEL_LABEL[mes.level]}` : " · sem meta batida"}`
-                            : `${monthName(m)}: sem dado`
-                        }
+                        title={`${monthName(m)}: ${money(mes.revenue)}${
+                          mes.level ? ` · ${LEVEL_LABEL[mes.level]}` : " · sem meta batida"
+                        }`}
                       >
                         {monthName(m).slice(0, 3)}
                       </span>
@@ -129,9 +142,18 @@ export default async function RankingAnoPage({ searchParams }: { searchParams: {
         </ol>
       )}
 
-      <p className="text-xs text-creme-700">
-        Os níveis são cumulativos: um mês de Diamante conta também como Ouro e Prata.
-      </p>
+      <div className="flex flex-wrap items-center gap-4 text-xs text-creme-700">
+        <span>Cada mês conta uma vez, no nível que a vendedora bateu.</span>
+        <span className="flex items-center gap-1.5">
+          <span className="flex h-4 w-5 items-center justify-center rounded border border-coral/40 bg-coral/10 text-[9px] text-coral">
+            ✕
+          </span>
+          planilha do mês ainda não importada
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-4 w-5 rounded bg-base-600" /> mês importado, sem meta batida
+        </span>
+      </div>
     </div>
   );
 }

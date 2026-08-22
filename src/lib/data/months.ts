@@ -28,6 +28,8 @@ export interface SellerRow {
   online: number | null;
   /** Projeção de fechamento do mês (linha "Projeção" da aba da vendedora). */
   projection: number | null;
+  /** Observação do mês, mostrada junto do nome. */
+  note: string | null;
   editedAt: Date | null;
   level: LevelProgress;
   position: number;
@@ -87,6 +89,7 @@ export async function getSellerRanking(periodId: string): Promise<SellerRow[]> {
         salao: toNumber(s.salao),
         online: toNumber(s.online),
         projection: toNumber(s.projection),
+        note: s.note,
         editedAt: s.editedAt,
         level: computeLevel(
           revenue,
@@ -194,18 +197,12 @@ export async function getAnnualRanking(year: number): Promise<LinhaAnual[]> {
       s.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
     ).current;
 
-    // Os níveis são cumulativos: bater Diamante significa ter passado por
-    // Prata e Ouro, e o placar do ano precisa refletir isso.
-    if (nivel === "DIAMANTE") {
-      linha.diamante += 1;
-      linha.ouro += 1;
-      linha.prata += 1;
-    } else if (nivel === "OURO") {
-      linha.ouro += 1;
-      linha.prata += 1;
-    } else if (nivel === "PRATA") {
-      linha.prata += 1;
-    }
+    // Cada mês conta uma vez só, no nível que ela efetivamente bateu: um mês
+    // de Diamante é um Diamante, e não também um Ouro e um Prata. Somar os
+    // três colunas dá o número de meses em que ela bateu alguma meta.
+    if (nivel === "DIAMANTE") linha.diamante += 1;
+    else if (nivel === "OURO") linha.ouro += 1;
+    else if (nivel === "PRATA") linha.prata += 1;
     if (nivel) linha.mesesComMeta += 1;
 
     linha.mesesTrabalhados += 1;

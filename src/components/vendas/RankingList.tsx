@@ -81,6 +81,14 @@ export function RankingList({
               <LevelBadge level={row.level.current} size="sm" />
             </div>
 
+            {/* Observação do mês: é aqui que se explica, por exemplo, que o
+                mês soma o período de experiência com o de carteira assinada. */}
+            {row.note && (
+              <p className="mt-3 rounded-xl border border-base-600/70 bg-base-700/40 px-3.5 py-2.5 text-xs leading-relaxed text-creme-500">
+                {row.note}
+              </p>
+            )}
+
             <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-base-600/50 pt-3.5 sm:grid-cols-4">
               <Metric label="Vendas" value={integer(row.salesCount)} />
               <Metric label="Peças" value={integer(row.pieces)} />

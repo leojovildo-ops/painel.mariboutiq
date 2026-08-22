@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiUser } from "@/lib/rbac";
 import { forbidden, handleError, jsonError, unauthorized } from "@/lib/apiError";
 import { parseMonthWorkbook } from "@/lib/xlsx/parseMonthWorkbook";
+import { money } from "@/lib/format";
 import { avisosDeNomesParecidos } from "@/lib/import/nomesParecidos";
 
 export const runtime = "nodejs";
@@ -30,12 +31,29 @@ export async function POST(request: Request) {
       );
     }
 
+    // Abas da mesma pessoa (experiência + carteira assinada) serão somadas na
+    // gravação; quem confere precisa saber disso antes de salvar.
+    const porPessoa = new Map<string, typeof parsed.sellers>();
+    for (const s of parsed.sellers) {
+      const lista = porPessoa.get(s.sellerName) ?? [];
+      lista.push(s);
+      porPessoa.set(s.sellerName, lista);
+    }
+    const avisosDeSoma = Array.from(porPessoa.entries())
+      .filter(([, abas]) => abas.length > 1)
+      .map(([nome, abas]) => {
+        const total = abas.reduce((acc, a) => acc + a.revenue, 0);
+        const detalhe = abas.map((a) => `${a.sheetName} (${money(a.revenue)})`).join(" + ");
+        return `${nome} tem ${abas.length} abas nesta planilha e elas serão somadas num mês só: ${detalhe} = ${money(total)}. A observação do mês vai registrar isso.`;
+      });
+
     // Erro de digitação no nome da aba criaria uma vendedora duplicada.
     const vendedoras = await prisma.seller.findMany({ select: { sheetName: true } });
     const avisos = [
       ...parsed.warnings,
+      ...avisosDeSoma,
       ...avisosDeNomesParecidos(
-        parsed.sellers.map((s) => s.sheetName),
+        Array.from(porPessoa.keys()),
         vendedoras.map((v) => v.sheetName)
       )
     ];

@@ -103,6 +103,12 @@ export default async function NiveisPage({ searchParams }: { searchParams: { mes
                   </div>
                 </div>
 
+                {row.note && (
+                  <p className="mt-4 rounded-xl border border-base-600/70 bg-base-700/40 px-3.5 py-2.5 text-xs leading-relaxed text-creme-500">
+                    {row.note}
+                  </p>
+                )}
+
                 {level.next && level.nextTarget != null ? (
                   <div className="mt-5">
                     <div className="mb-2 flex items-baseline justify-between gap-3">

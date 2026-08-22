@@ -41,6 +41,10 @@ export interface ParsedDay {
 
 export interface ParsedSheet {
   sheetName: string;
+  /** Nome da vendedora, já sem o sufixo de período de experiência. */
+  sellerName: string;
+  /** Aba do período de experiência, anterior à carteira assinada. */
+  isTrial: boolean;
   scope: "STORE" | "SELLER";
   workingDays: number | null;
   workedDays: number | null;
@@ -89,14 +93,30 @@ export function normalize(value: string): string {
 /** Abas de modelo/rascunho: "LOJA", "VEND", "VEND 1", "vend 2"... */
 export function isTemplateSheet(name: string): boolean {
   const n = normalize(name);
-  // "RAFAELA TESTE", "Planilha1" e parecidas são abas de rascunho ou a aba
-  // padrão vazia do Excel: virariam uma vendedora fantasma no ranking.
+  // Atenção: "<NOME> TESTE" NÃO entra aqui. Não é rascunho — é o período de
+  // experiência da vendedora, antes da carteira assinada, e os dias dela
+  // contam. Quem trata disso é `baseSellerName`, logo abaixo.
   return (
     n === "LOJA" ||
     /^VEND(EDORA)?S?\.?( ?\d+)?$/.test(n) ||
-    /\bTESTE?\b/.test(n) ||
     /^(PLANILHA|PLAN|SHEET|FOLHA)\s*\d*$/.test(n)
   );
+}
+
+/**
+ * Nome da vendedora por trás do nome da aba. A loja usa uma aba separada para
+ * o período de experiência ("RAFAELA TESTE") e outra para depois da carteira
+ * assinada ("RAFAELA") — as duas são a mesma pessoa e o mês dela é a soma das
+ * duas, com uma observação dizendo isso.
+ */
+export function baseSellerName(sheetName: string): string {
+  return normalize(sheetName)
+    .replace(/\s*[-–(]?\s*(TESTE|EXPERIENCIA|EXP)\.?\s*\)?$/, "")
+    .trim();
+}
+
+export function isTrialSheet(sheetName: string): boolean {
+  return /\s(TESTE|EXPERIENCIA|EXP)\.?\)?$/.test(normalize(sheetName));
 }
 
 export function isStoreSheet(name: string): boolean {
@@ -362,6 +382,8 @@ function parseSheet(
   return {
     sheet: {
       sheetName: normalize(sheetName),
+      sellerName: baseSellerName(sheetName),
+      isTrial: isTrialSheet(sheetName),
       scope: isStoreSheet(sheetName) ? "STORE" : "SELLER",
       workingDays: (() => {
         const v = valueByLabel(sheet, (l) => l.startsWith("DIAS UTEIS"), lastCol, 2, 6);

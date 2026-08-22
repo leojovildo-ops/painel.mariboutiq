@@ -67,6 +67,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
               pa: s.pa == null ? null : Number(s.pa),
               tkm: s.tkm == null ? null : Number(s.tkm),
               projection: s.projection == null ? null : Number(s.projection),
+              note: s.note,
               editedAt: s.editedAt ? s.editedAt.toISOString() : null
             }))}
           />
