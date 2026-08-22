@@ -36,6 +36,21 @@ export function gerarObservacoes(mes: MesFinanceiro, anteriores: MesFinanceiro[]
   const anterior = anteriores.length > 0 ? anteriores[anteriores.length - 1] : null;
   const comReceita = anteriores.filter((m) => m.revenue != null && m.revenue > 0);
 
+  // ---- Mês ainda aberto -----------------------------------------------------
+  // Nada aqui pode comparar um mês pela metade com meses fechados sem dizer
+  // que é isso que está acontecendo: a "queda" seria só o mês não ter acabado.
+  if (mes.emAndamento) {
+    const dias =
+      mes.diasTrabalhados != null && mes.diasUteis != null
+        ? ` Até agora são ${mes.diasTrabalhados} de ${mes.diasUteis} dias úteis.`
+        : "";
+    obs.push({
+      tom: "ATENCAO",
+      titulo: "Mês ainda em andamento",
+      texto: `Os números abaixo são parciais e não dá para compará-los de igual para igual com meses fechados.${dias}`
+    });
+  }
+
   // ---- Resultado do mês -----------------------------------------------------
   if (mes.revenue == null) {
     obs.push({
@@ -47,27 +62,30 @@ export function gerarObservacoes(mes: MesFinanceiro, anteriores: MesFinanceiro[]
   } else if (mes.profit != null && mes.margin != null) {
     if (mes.profit < 0) {
       obs.push({
-        tom: "NEGATIVO",
-        titulo: `Mês fechou no vermelho: ${brl(mes.profit)}`,
+        tom: mes.emAndamento ? "ATENCAO" : "NEGATIVO",
+        titulo: mes.emAndamento
+          ? `Parcial no vermelho: ${brl(mes.profit)}`
+          : `Mês fechou no vermelho: ${brl(mes.profit)}`,
         texto: `As despesas (${brl(mes.expenses)}) passaram o faturamento (${brl(mes.revenue)}). A diferença precisa sair do caixa ou de meses melhores.`
       });
     } else if (mes.margin >= META_MARGEM) {
       obs.push({
         tom: "POSITIVO",
-        titulo: `Margem de ${pct(mes.margin)}, acima da meta de ${pct(META_MARGEM)}`,
+        titulo: `Margem${mes.emAndamento ? " parcial" : ""} de ${pct(mes.margin)}, acima da meta de ${pct(META_MARGEM)}`,
         texto: `Lucro de ${brl(mes.profit)} sobre ${brl(mes.revenue)} de faturamento.`
       });
     } else {
       obs.push({
         tom: "ATENCAO",
-        titulo: `Margem de ${pct(mes.margin)}, abaixo da meta de ${pct(META_MARGEM)}`,
+        titulo: `Margem${mes.emAndamento ? " parcial" : ""} de ${pct(mes.margin)}, abaixo da meta de ${pct(META_MARGEM)}`,
         texto: `Sobrou ${brl(mes.profit)}. Para bater a meta neste faturamento, as despesas teriam que ficar em ${brl(mes.revenue * (1 - META_MARGEM / 100))}.`
       });
     }
   }
 
   // ---- Faturamento contra o mês anterior ------------------------------------
-  if (mes.revenue != null && anterior?.revenue != null) {
+  // Só faz sentido com o mês fechado (ver acima).
+  if (!mes.emAndamento && mes.revenue != null && anterior?.revenue != null) {
     const v = variacao(mes.revenue, anterior.revenue);
     if (v != null && Math.abs(v) >= VARIACAO_RELEVANTE) {
       obs.push({
@@ -79,7 +97,7 @@ export function gerarObservacoes(mes: MesFinanceiro, anteriores: MesFinanceiro[]
   }
 
   // ---- Despesas contra a média dos meses anteriores -------------------------
-  if (anteriores.length >= 2) {
+  if (!mes.emAndamento && anteriores.length >= 2) {
     const media = anteriores.reduce((acc, m) => acc + m.expenses, 0) / anteriores.length;
     const v = variacao(mes.expenses, media);
     if (v != null && v >= VARIACAO_RELEVANTE * 2) {
@@ -109,7 +127,7 @@ export function gerarObservacoes(mes: MesFinanceiro, anteriores: MesFinanceiro[]
   }
 
   // ---- Grupo que mais variou contra a média --------------------------------
-  if (anteriores.length >= 2) {
+  if (!mes.emAndamento && anteriores.length >= 2) {
     const mediaPorGrupo = new Map<string, number>();
     for (const m of anteriores) {
       for (const g of m.groups) mediaPorGrupo.set(g.group, (mediaPorGrupo.get(g.group) ?? 0) + g.total);
@@ -161,7 +179,7 @@ export function gerarObservacoes(mes: MesFinanceiro, anteriores: MesFinanceiro[]
   }
 
   // ---- Melhor mês do ano até aqui ------------------------------------------
-  if (mes.margin != null && comReceita.length >= 2) {
+  if (!mes.emAndamento && mes.margin != null && comReceita.length >= 2) {
     const melhorAnterior = Math.max(...comReceita.map((m) => m.margin ?? -Infinity));
     if (mes.margin > melhorAnterior) {
       obs.push({

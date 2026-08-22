@@ -23,6 +23,14 @@ export interface MesFinanceiro {
   /** Lançamentos sem data de pagamento no mês. */
   emAberto: number;
   emAbertoValor: number;
+  /**
+   * Mês ainda em andamento. Comparar um mês pela metade com meses fechados
+   * produz quedas que não existem, então quem lê os números precisa saber.
+   */
+  emAndamento: boolean;
+  /** Dias trabalhados / dias úteis, quando a planilha de vendas trouxe. */
+  diasTrabalhados: number | null;
+  diasUteis: number | null;
 }
 
 /** Anos que já têm despesa lançada. */
@@ -65,6 +73,9 @@ export async function getFinanceYear(year: number): Promise<MesFinanceiro[]> {
 
     const abertos = period.expenses.filter((e) => e.paidAt == null);
 
+    const hoje = new Date();
+    const emAndamento = period.year === hoje.getFullYear() && period.month === hoje.getMonth() + 1;
+
     return {
       periodId: period.id,
       year: period.year,
@@ -82,7 +93,10 @@ export async function getFinanceYear(year: number): Promise<MesFinanceiro[]> {
         }))
         .sort((a, b) => b.total - a.total),
       emAberto: abertos.length,
-      emAbertoValor: abertos.reduce((acc, e) => acc + Number(e.amount), 0)
+      emAbertoValor: abertos.reduce((acc, e) => acc + Number(e.amount), 0),
+      emAndamento,
+      diasTrabalhados: period.stats[0]?.workedDays ?? null,
+      diasUteis: period.stats[0]?.workingDays ?? null
     };
   });
 }
