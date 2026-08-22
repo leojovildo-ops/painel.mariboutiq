@@ -1,25 +1,33 @@
-/** Marca Mari Boutique: monograma "MB" em coral sobre terracota. */
-export function Logo({ size = 44 }: { size?: number }) {
+import Image from "next/image";
+import logo from "../../../public/logo-mari-boutique.png";
+
+/**
+ * Logotipo oficial da Mari Boutique, na variação clara.
+ *
+ * O arquivo do kit da marca é preto sobre branco e sumiria no fundo escuro do
+ * painel; a versão creme foi gerada a partir dele por `scripts/gerarLogo.ts`,
+ * preservando os traços originais. Como o logotipo já diz "Mari boutique", o
+ * texto ao lado se limita a nomear o sistema, sem repetir a marca.
+ */
+export function Logo({ width = 150 }: { width?: number }) {
   return (
-    <span
-      className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-terracota to-coral font-display font-bold text-base shadow-glow"
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
-      aria-hidden
-    >
-      MB
-    </span>
+    <Image
+      src={logo}
+      alt="Mari Boutique"
+      width={width}
+      height={Math.round((width * 1094) / 2310)}
+      priority
+      className="h-auto"
+    />
   );
 }
 
 export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="flex items-center gap-3">
-      <Logo size={compact ? 36 : 44} />
-      <span className="leading-tight">
-        <span className="block font-display text-lg font-bold tracking-tight text-creme">
-          Painel Mariboutique <span className="text-coral">360</span>
-        </span>
-        <span className="label block">Mari Boutique</span>
+    <span className="flex flex-col gap-1.5">
+      <Logo width={compact ? 116 : 152} />
+      <span className="label pl-0.5">
+        Painel <span className="text-coral">360</span>
       </span>
     </span>
   );

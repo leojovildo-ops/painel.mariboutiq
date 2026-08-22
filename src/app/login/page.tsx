@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { Wordmark } from "@/components/brand/Logo";
+import { Logo } from "@/components/brand/Logo";
 import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = { title: "Entrar · Painel Mariboutique 360" };
@@ -13,8 +13,11 @@ export default async function LoginPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center px-5 py-12">
       <div className="w-full max-w-[26rem]">
-        <div className="mb-8 flex justify-center">
-          <Wordmark />
+        <div className="mb-9 flex flex-col items-center gap-2">
+          <Logo width={210} />
+          <span className="label">
+            Painel <span className="text-coral">360</span>
+          </span>
         </div>
 
         <div className="card p-7">
