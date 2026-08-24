@@ -208,6 +208,33 @@ Dois detalhes que custaram caro e é bom não reintroduzir:
   anônimos recusam. A proteção de verdade é server-side (`requireUser`/`requireAdmin` nos
   layouts e `apiUser` nas rotas) — veja `src/app/(app)/README-protecao.md`.
 
+## Demonstração
+
+**https://painel360-demo.vercel.app** — projeto `painel360-demo` na Vercel, com dados fictícios.
+
+Serve para mostrar o sistema sem expor os números da loja. É o mesmo código, com duas diferenças
+controladas por variável de ambiente:
+
+- `NEXT_PUBLIC_DEMO=1` troca a marca (nome genérico "Sua Marca", sem o logotipo) e liga a faixa fixa
+  avisando que os números são fictícios.
+- `DATABASE_URL` aponta para o schema `demo` do mesmo Postgres — **tabelas separadas**. O isolamento
+  é no banco, e não num filtro da aplicação: assim nenhum número real aparece na demo nem por engano.
+
+Os dados são gerados por `npm run seed:demo` (o script recusa rodar se a URL não terminar em
+`schema=demo`). Eles imitam a forma dos reais de propósito — sazonalidade de moda, mês fechando no
+vermelho, produto parado, vendedora que não bate meta —, porque demonstração com números perfeitos
+não mostra os alertas do sistema funcionando.
+
+Acessos da demo: `demo@painel360.com.br`, `supervisora@painel360.com.br` e
+`vendedora@painel360.com.br`, todos com a senha `demo1234`.
+
+A demo **não tem as credenciais do Google Drive**: o botão de atualizar avisa que não está
+configurado, e ela não alcança a pasta da loja.
+
+Para publicar uma versão nova da demo, copie o projeto para uma pasta separada (sem `.vercel`) e
+rode `vercel deploy --prod` lá — os dois projetos apontam para o mesmo código, mas cada um tem o seu
+link e as suas variáveis.
+
 ## No celular
 
 O painel é instalável na tela de início (PWA): manifesto em `src/app/manifest.ts` e ícones em
