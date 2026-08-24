@@ -182,7 +182,13 @@ configurado e o upload manual continua funcionando normalmente.
 
 ## No ar
 
-**https://painel-mariboutique-360.vercel.app** — projeto `mariboutiq/painel-mariboutique-360` na Vercel.
+**https://painel.mariboutiq.com.br** — projeto `mariboutiq/painel-mariboutique-360` na Vercel.
+O endereço `painel-mariboutique-360.vercel.app` continua respondendo.
+
+O domínio é um subdomínio do domínio da loja: `mariboutiq.com.br` e `www` seguem apontando para a
+Nuvemshop, e só o registro A de `painel` aponta para a Vercel (76.76.21.21). O DNS é gerenciado no
+Registro.br. **Nunca troque os nameservers do domínio para a Vercel** — isso levaria a zona inteira
+e derrubaria a loja.
 
 As três variáveis já estão salvas no projeto (production, preview e development):
 `DATABASE_URL`, `NEXTAUTH_SECRET` e `NEXTAUTH_URL`.
@@ -195,12 +201,22 @@ npx vercel deploy --prod
 
 Dois detalhes que custaram caro e é bom não reintroduzir:
 
-- **`NEXTAUTH_URL` precisa ser o domínio fixo** (`painel-mariboutique-360.vercel.app`). Sem ele,
+- **`NEXTAUTH_URL` precisa ser o domínio pelo qual as pessoas acessam** (`painel.mariboutiq.com.br`). Sem ele,
   o NextAuth cai no `VERCEL_URL`, que é o endereço único de cada build — o login responde
   401 mesmo com a senha certa, porque o host do cookie não bate com o host acessado.
 - **Não existe `middleware.ts`.** No Next 14 ele só roda no runtime Edge, que os deploys
   anônimos recusam. A proteção de verdade é server-side (`requireUser`/`requireAdmin` nos
   layouts e `apiUser` nas rotas) — veja `src/app/(app)/README-protecao.md`.
+
+## No celular
+
+O painel é instalável na tela de início (PWA): manifesto em `src/app/manifest.ts` e ícones em
+`public/`, gerados a partir do logotipo por `scripts/gerarIcones.ts`. No iPhone a instalação só
+funciona pelo **Safari** (Compartilhar → Adicionar à Tela de Início), e o app instalado tem sessão
+separada da do navegador — é preciso entrar uma vez dentro dele.
+
+O painel é `noindex` de propósito: é um sistema interno com faturamento, despesas e margem, e não
+deve aparecer em busca.
 
 ## Fora do escopo
 
