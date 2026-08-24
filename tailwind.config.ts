@@ -9,28 +9,31 @@ const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      // Os valores vivem em variáveis CSS (ver globals.css) para o ambiente de
+      // demonstração poder trocar a paleta inteira sem mexer em uma classe
+      // sequer das telas.
       colors: {
         base: {
-          DEFAULT: "#160F0D", // fundo da página
-          800: "#1F1613",     // cartões
-          700: "#2A1E19",     // cartões elevados / hover
-          600: "#3A2A23"      // bordas
+          DEFAULT: "rgb(var(--c-base) / <alpha-value>)", // fundo da página
+          800: "rgb(var(--c-base-800) / <alpha-value>)", // cartões
+          700: "rgb(var(--c-base-700) / <alpha-value>)", // elevados / hover
+          600: "rgb(var(--c-base-600) / <alpha-value>)"  // bordas
         },
         terracota: {
-          DEFAULT: "#A64B2A",
-          600: "#8E3F23",
-          400: "#C25F3B"
+          DEFAULT: "rgb(var(--c-terracota) / <alpha-value>)",
+          600: "rgb(var(--c-terracota-600) / <alpha-value>)",
+          400: "rgb(var(--c-terracota-400) / <alpha-value>)"
         },
         coral: {
-          DEFAULT: "#E4714E",
-          400: "#F08A66",
-          300: "#F4A184"
+          DEFAULT: "rgb(var(--c-coral) / <alpha-value>)",
+          400: "rgb(var(--c-coral-400) / <alpha-value>)",
+          300: "rgb(var(--c-coral-300) / <alpha-value>)"
         },
         creme: {
-          DEFAULT: "#F6EBE1",
-          300: "#E4D3C5",
-          500: "#BFA595", // texto secundário
-          700: "#8B7266"  // texto de apoio / rótulos
+          DEFAULT: "rgb(var(--c-creme) / <alpha-value>)",
+          300: "rgb(var(--c-creme-300) / <alpha-value>)",
+          500: "rgb(var(--c-creme-500) / <alpha-value>)", // texto secundário
+          700: "rgb(var(--c-creme-700) / <alpha-value>)"  // texto de apoio
         },
         nivel: {
           prata: "#CBD1D8",

@@ -21,23 +21,43 @@ const prisma = new PrismaClient();
 const ANO = new Date().getFullYear();
 const MES_ATUAL = new Date().getMonth() + 1;
 
+/**
+ * Quatro vendedoras, com valores fechados que somam exatos R$ 100.000 no mês.
+ * A divisão é escolhida para cada uma cair num nível diferente e a tela de
+ * gamificação mostrar os quatro estados de uma vez.
+ */
 const VENDEDORAS = [
-  { sheetName: "ANA", name: "Ana Beatriz", forca: 1.15 },
-  { sheetName: "CAMILA", name: "Camila Rocha", forca: 1.0 },
-  { sheetName: "JULIA", name: "Júlia Mendes", forca: 0.82 },
-  { sheetName: "LARISSA", name: "Larissa Prado", forca: 0.7, entraNoMes: 5 }
+  { sheetName: "ANA", name: "Ana Beatriz", receita: 32000 },
+  { sheetName: "CAMILA", name: "Camila Rocha", receita: 28000 },
+  { sheetName: "JULIA", name: "Júlia Mendes", receita: 22000 },
+  { sheetName: "LARISSA", name: "Larissa Prado", receita: 18000 }
 ];
 
-/** Peso de cada mês no varejo de moda: dezembro explode, janeiro esvazia. */
-const SAZONALIDADE = [0.72, 0.88, 0.95, 1.0, 1.12, 1.05, 0.98, 1.02, 1.0, 1.08, 1.2, 1.85];
+const FATURAMENTO_MES = 100000;
 
+/** Metas iguais para todas, redondas: Ana bate Diamante, Camila Ouro,
+ *  Júlia Prata e Larissa fica a caminho. */
+const METAS_VENDEDORA: Array<[GoalLevel, number]> = [
+  ["PRATA", 20000],
+  ["OURO", 25000],
+  ["DIAMANTE", 30000]
+];
+
+/** Metas da loja: o mês fecha exatamente no Diamante. */
+const METAS_LOJA: Array<[GoalLevel, number]> = [
+  ["PRATA", 80000],
+  ["OURO", 90000],
+  ["DIAMANTE", 100000]
+];
+
+/** Somam R$ 88.000 num mês normal: lucro de R$ 12.000, margem de 12%. */
 const GRUPOS = [
-  { nome: "FORNECEDOR", fatia: 0.42 },
-  { nome: "DESPESAS FUNCIONÁRIOS", fatia: 0.18 },
-  { nome: "IMPOSTOS", fatia: 0.11 },
-  { nome: "CUSTOS FIXOS", fatia: 0.09 },
-  { nome: "CUSTOS VARIÁVEIS", fatia: 0.07 },
-  { nome: "DESPESAS PESSOAL DOS SÓCIOS", fatia: 0.08 }
+  { nome: "FORNECEDOR", valor: 40000 },
+  { nome: "DESPESAS FUNCIONÁRIOS", valor: 17000 },
+  { nome: "IMPOSTOS", valor: 10000 },
+  { nome: "CUSTOS FIXOS", valor: 8000 },
+  { nome: "CUSTOS VARIÁVEIS", valor: 6000 },
+  { nome: "DESPESAS PESSOAL DOS SÓCIOS", valor: 7000 }
 ];
 
 const PRODUTOS = [
@@ -141,20 +161,22 @@ async function main() {
 
   // Anos anteriores, só o consolidado da loja, para o comparativo anual.
   for (const ano of [ANO - 3, ANO - 2, ANO - 1]) {
-    const base = ano === ANO - 3 ? 62000 : ano === ANO - 2 ? 84000 : 108000;
+    const base = ano === ANO - 3 ? 55000 : ano === ANO - 2 ? 70000 : 85000;
     for (let mes = 1; mes <= 12; mes++) {
       const period = await prisma.period.create({ data: { year: ano, month: mes } });
-      const receita = base * SAZONALIDADE[mes - 1] * entre(0.92, 1.08);
-      const vendas = Math.round(receita / entre(150, 195));
+      // Valores redondos, com dezembro mais forte, para o comparativo anual
+      // mostrar crescimento sem parecer gerado por sorteio.
+      const receita = mes === 12 ? base * 1.5 : base;
+      const vendas = Math.round(receita / 175);
       await prisma.monthlyStats.create({
         data: {
           scope: "STORE",
           periodId: period.id,
           revenue: receita.toFixed(2),
           salesCount: vendas,
-          pieces: Math.round(vendas * entre(1.9, 2.4)),
+          pieces: vendas * 2,
           tkm: (receita / vendas).toFixed(2),
-          pa: entre(1.9, 2.4).toFixed(2),
+          pa: "2.00",
           note: "Resultado consolidado, importado do histórico da loja."
         }
       });
@@ -173,23 +195,13 @@ async function main() {
     let pecasLoja = 0;
 
     for (const v of sellers) {
-      if (v.entraNoMes && mes < v.entraNoMes) continue;
-
-      const receita = 42000 * v.forca * SAZONALIDADE[mes - 1] * entre(0.88, 1.12) * fracao;
-      const vendas = Math.round(receita / entre(155, 200));
-      const pecas = Math.round(vendas * entre(1.8, 2.5));
+      const receita = v.receita * fracao;
+      const vendas = Math.round(receita / 200);
+      const pecas = vendas * 2;
 
       receitaLoja += receita;
       vendasLoja += vendas;
       pecasLoja += pecas;
-
-      // Metas fixas por vendedora, como nas planilhas reais.
-      const metaPrata = 32000 * v.forca;
-      const metas: Array<[GoalLevel, number]> = [
-        ["PRATA", metaPrata],
-        ["OURO", metaPrata * 1.2],
-        ["DIAMANTE", metaPrata * 1.45]
-      ];
 
       const stats = await prisma.monthlyStats.create({
         data: {
@@ -201,36 +213,39 @@ async function main() {
           pieces: pecas,
           tkm: (receita / vendas).toFixed(2),
           pa: (pecas / vendas).toFixed(2),
-          salao: (receita * entre(0.86, 0.98)).toFixed(2),
-          online: (receita * entre(0.02, 0.14)).toFixed(2),
+          salao: (receita * 0.9).toFixed(2),
+          online: (receita * 0.1).toFixed(2),
           workingDays: diasUteis,
-          workedDays: emAndamento ? 16 : Math.round(entre(20, 25)),
+          workedDays: emAndamento ? 16 : 24,
           projection: emAndamento ? (receita / 0.62).toFixed(2) : null,
           npsScore: entre(8.4, 9.9).toFixed(2),
-          npsResponses: Math.round(entre(8, 34))
+          npsResponses: 20
         }
       });
 
       await prisma.goal.createMany({
-        data: metas.map(([level, target]) => ({ statsId: stats.id, level, target: target.toFixed(2) }))
+        data: METAS_VENDEDORA.map(([level, target]) => ({
+          statsId: stats.id,
+          level,
+          target: target.toFixed(2)
+        }))
       });
 
       const diasNoMes = emAndamento ? 16 : 24;
       await prisma.dailyEntry.createMany({
         data: Array.from({ length: diasNoMes }, (_, i) => {
-          const doDia = (receita / diasNoMes) * entre(0.45, 1.7);
+          const doDia = receita / diasNoMes;
           return {
             statsId: stats.id,
             day: i + 1,
             revenue: doDia.toFixed(2),
-            sales: Math.max(1, Math.round((vendas / diasNoMes) * entre(0.5, 1.6))),
-            pieces: Math.max(1, Math.round((pecas / diasNoMes) * entre(0.5, 1.6)))
+            sales: Math.max(1, Math.round(vendas / diasNoMes)),
+            pieces: Math.max(1, Math.round(pecas / diasNoMes))
           };
         })
       });
     }
 
-    const metaLoja = 150000;
     const statsLoja = await prisma.monthlyStats.create({
       data: {
         scope: "STORE",
@@ -243,24 +258,26 @@ async function main() {
         workingDays: diasUteis,
         workedDays: emAndamento ? 16 : 24,
         projection: emAndamento ? (receitaLoja / 0.62).toFixed(2) : null,
-        npsScore: entre(8.8, 9.7).toFixed(2),
-        npsResponses: Math.round(entre(30, 90))
+        npsScore: "9.40",
+        npsResponses: 60
       }
     });
     await prisma.goal.createMany({
-      data: [
-        { statsId: statsLoja.id, level: "PRATA" as GoalLevel, target: metaLoja.toFixed(2) },
-        { statsId: statsLoja.id, level: "OURO" as GoalLevel, target: (metaLoja * 1.2).toFixed(2) },
-        { statsId: statsLoja.id, level: "DIAMANTE" as GoalLevel, target: (metaLoja * 1.45).toFixed(2) }
-      ]
+      data: METAS_LOJA.map(([level, target]) => ({
+        statsId: statsLoja.id,
+        level,
+        target: target.toFixed(2)
+      }))
     });
 
     // Despesas: em março o fornecedor pesa e o mês fecha no vermelho, para a
     // leitura em texto ter o que apontar.
-    const pesoDoMes = mes === 3 ? 1.45 : entre(0.82, 1.02);
+    // Em março a compra de mercadoria dobra e o mês fecha no vermelho: sem um
+    // mês ruim, a leitura em texto não teria o que apontar na demonstração.
+    const pesoDoMes = mes === 3 ? 1.5 : 1;
     for (const grupo of GRUPOS) {
-      const totalGrupo = receitaLoja * grupo.fatia * pesoDoMes;
-      const lancamentos = Math.round(entre(4, 12));
+      const totalGrupo = grupo.valor * pesoDoMes * fracao;
+      const lancamentos = 6;
       await prisma.expense.createMany({
         data: Array.from({ length: lancamentos }, (_, i) => ({
           periodId: period.id,

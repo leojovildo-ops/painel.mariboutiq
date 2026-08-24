@@ -13,5 +13,7 @@ export const marca = {
   /** Nome da loja, usado nos textos das telas. */
   loja: ehDemonstracao ? "Sua Marca" : "Mari Boutique",
   /** O logotipo é da Mari Boutique; a demo usa um monograma neutro. */
-  usarLogotipo: !ehDemonstracao
+  usarLogotipo: !ehDemonstracao,
+  /** Nome curto que aparece embaixo do ícone no celular. */
+  nomeDoApp: ehDemonstracao ? "Painel360 Demo" : "Mariboutique"
 };
