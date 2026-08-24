@@ -9,6 +9,10 @@
 
   body {
     @apply bg-base text-creme font-sans antialiased;
+    /* Área segura do iPhone: no modo tela cheia não há barra do navegador
+       protegendo o conteúdo do notch nem da faixa inferior. */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
     /* Brilho terracota discreto no topo, para o fundo não ficar chapado. */
     background-image: radial-gradient(1100px 520px at 15% -10%, rgba(166, 75, 42, 0.28), transparent 60%),
       radial-gradient(900px 420px at 95% 0%, rgba(228, 113, 78, 0.14), transparent 55%);
