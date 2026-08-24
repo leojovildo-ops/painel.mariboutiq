@@ -15,7 +15,7 @@ const TOM = {
   neutro: "border-base-600 bg-base-700/40 text-creme-700"
 } as const;
 
-const FILTROS: FiltroDeProduto[] = ["todos", "parados", "baixa-saida", "repor", "campeoes"];
+const FILTROS: FiltroDeProduto[] = ["todos", "parados", "baixa-saida", "repor", "negativos", "campeoes"];
 
 export default async function ProdutosPage({
   searchParams

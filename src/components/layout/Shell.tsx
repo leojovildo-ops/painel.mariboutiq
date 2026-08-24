@@ -6,6 +6,20 @@ import type { Role } from "@prisma/client";
 import { Wordmark } from "@/components/brand/Logo";
 import { Nav } from "./Nav";
 
+/** "24/08 às 16:23", ou só a data quando não é de hoje nem de ontem. */
+function formatarAtualizacao(iso: string): string {
+  const data = new Date(iso);
+  const agora = new Date();
+  const dias = Math.floor((agora.getTime() - data.getTime()) / 86400000);
+
+  const dia = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(data);
+  const hora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(data);
+
+  if (dias === 0) return `hoje às ${hora}`;
+  if (dias === 1) return `ontem às ${hora}`;
+  return dia;
+}
+
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN: "Administrador",
   SUPERVISORA: "Supervisora",
@@ -17,12 +31,15 @@ export function Shell({
   name,
   greeting,
   canViewFinance,
+  atualizadoEm,
   children
 }: {
   role: Role;
   name: string;
   greeting: string;
   canViewFinance: boolean;
+  /** ISO da última importação que valeu, ou null se nada foi importado. */
+  atualizadoEm: string | null;
   children: React.ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -69,7 +86,14 @@ export function Shell({
       </aside>
 
       <main className="min-w-0 flex-1 px-4 py-7 sm:px-7 lg:px-10 lg:py-10">
-        <p className="font-display text-xl font-bold text-creme sm:text-2xl">{greeting}</p>
+        <p className="font-display text-xl font-bold text-creme sm:text-2xl">
+          {greeting}
+          {atualizadoEm && (
+            <span className="ml-2 font-sans text-sm font-normal text-creme-700">
+              (dados de {formatarAtualizacao(atualizadoEm)})
+            </span>
+          )}
+        </p>
         <div className="mt-7">{children}</div>
       </main>
     </div>

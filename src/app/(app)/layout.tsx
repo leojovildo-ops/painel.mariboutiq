@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/rbac";
 import { firstName } from "@/lib/format";
 import { Shell } from "@/components/layout/Shell";
+import { ultimaAtualizacao } from "@/lib/data/atualizacao";
 
 /** Saudação pelo horário — a marca é acolhedora, então o painel chama pelo nome. */
 function greetingFor(name: string): string {
@@ -13,6 +14,7 @@ function greetingFor(name: string): string {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const atualizado = await ultimaAtualizacao();
 
   return (
     <Shell
@@ -20,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       name={user.name}
       greeting={greetingFor(user.name)}
       canViewFinance={user.canViewFinance}
+      atualizadoEm={atualizado ? atualizado.toISOString() : null}
     >
       {children}
     </Shell>

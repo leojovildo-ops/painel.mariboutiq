@@ -67,6 +67,14 @@ export default async function EstoquePage() {
     });
   }
 
+  if (r.negativos.length > 0) {
+    criticos.push({
+      tom: "NEGATIVO",
+      titulo: `${integer(r.negativos.length)} produtos com estoque negativo`,
+      texto: `Prateleira não tem quantidade negativa: é venda lançada sem a entrada correspondente, ou baixa feita duas vezes no SISloja. O caso mais forte é "${r.negativos[0].description}", com ${integer(r.negativos[0].quantity)}.`
+    });
+  }
+
   if (r.repor.length > 0) {
     positivos.push({
       tom: "POSITIVO",
@@ -148,6 +156,14 @@ export default async function EstoquePage() {
             Zerados que vinham vendendo — cada dia sem repor é venda perdida.
           </p>
           <ListaDeItens itens={r.repor} coluna="vendidas" verTodos="repor" />
+        </section>
+
+        <section className="card p-6">
+          <h2 className="font-display text-lg font-bold text-creme">Estoque negativo</h2>
+          <p className="mb-4 mt-1 text-sm text-creme-500">
+            Quantidade abaixo de zero no SISloja — o controle e a prateleira não batem.
+          </p>
+          <ListaDeItens itens={r.negativos} coluna="vendidas" verTodos="negativos" />
         </section>
 
         <section className="card p-6">

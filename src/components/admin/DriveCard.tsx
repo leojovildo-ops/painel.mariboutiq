@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { PreviaVendas, type PreviaVendasDados } from "./PreviaVendas";
 import { PreviaDespesas, type PreviaDespesasDados } from "./PreviaDespesas";
 
-type Tipo = "VENDAS" | "DESPESAS" | "PESQUISA" | "ESTOQUE" | "HISTORICO" | "DESCONHECIDO";
+type Tipo =
+  | "VENDAS"
+  | "DESPESAS"
+  | "PESQUISA"
+  | "ESTOQUE"
+  | "ESTOQUE_VENDAS"
+  | "HISTORICO"
+  | "DESCONHECIDO";
 
 interface Arquivo {
   id: string;
@@ -19,7 +26,8 @@ const TIPO_LABEL: Record<Tipo, string> = {
   VENDAS: "Vendas",
   DESPESAS: "Despesas",
   PESQUISA: "Pesquisa",
-  ESTOQUE: "Estoque",
+  ESTOQUE: "Estoque: produtos",
+  ESTOQUE_VENDAS: "Estoque: vendas",
   HISTORICO: "Histórico anual",
   DESCONHECIDO: "Não identificado"
 };
@@ -88,9 +96,10 @@ export function DriveCard() {
 
     if (data.tipo === "VENDAS") setPreviaVendas(data.previa);
     else if (data.tipo === "DESPESAS") setPreviaDespesas(data.previa);
-    else if (data.tipo === "ESTOQUE") {
+    else if (data.tipo === "ESTOQUE" || data.tipo === "ESTOQUE_VENDAS") {
       const e = data.estoque;
-      setOk(`${e.itens} produtos e ${e.vendas} linhas de venda importados.`);
+      const detalhe = e.pedidos ? ` (${e.pedidos} pedidos, ${e.devolucoes} devoluções)` : "";
+      setOk(`Estoque atualizado: ${e.itens} produtos e ${e.vendas} linhas de venda${detalhe}.`);
       router.refresh();
     } else if (data.tipo === "HISTORICO") {
       const h = data.historico;
@@ -163,7 +172,7 @@ export function DriveCard() {
 
               {arquivo.tipo === "DESCONHECIDO" ? (
                 <div className="flex gap-2">
-                  {(["VENDAS", "DESPESAS", "PESQUISA", "ESTOQUE", "HISTORICO"] as const).map((t) => (
+                  {(["VENDAS", "DESPESAS", "PESQUISA", "ESTOQUE", "ESTOQUE_VENDAS", "HISTORICO"] as const).map((t) => (
                     <button
                       key={t}
                       type="button"

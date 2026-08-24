@@ -34,6 +34,8 @@ export interface ResumoEstoque {
   baixaSaida: ItemAnalisado[];
   /** Zerados que vinham vendendo — candidatos a reposição. */
   repor: ItemAnalisado[];
+  /** Quantidade negativa no SISloja: saiu mais do que entrou no controle. */
+  negativos: ItemAnalisado[];
   /** Os que mais giraram no período. */
   campeoes: ItemAnalisado[];
   porCategoria: Array<{ categoria: string; itens: number; unidades: number; valorEmCusto: number; vendidas: number }>;
@@ -108,7 +110,7 @@ export async function getResumoEstoque(): Promise<ResumoEstoque> {
     return {
       temDados: false, arquivo: null, periodo: null, itens: 0, unidades: 0,
       valorEmCusto: 0, valorEmVenda: 0, parados: [], baixaSaida: [], repor: [],
-      campeoes: [], porCategoria: [], margemMedia: null
+      negativos: [], campeoes: [], porCategoria: [], margemMedia: null
     };
   }
 
@@ -123,6 +125,12 @@ export async function getResumoEstoque(): Promise<ResumoEstoque> {
   const repor = analisados
     .filter((i) => i.quantity === 0 && i.unidadesVendidas > 0)
     .sort((a, b) => b.unidadesVendidas - a.unidadesVendidas);
+
+  // Estoque negativo é impossível na prateleira: significa venda lançada sem
+  // a entrada correspondente, ou baixa feita duas vezes no SISloja.
+  const negativos = analisados
+    .filter((i) => i.quantity < 0)
+    .sort((a, b) => a.quantity - b.quantity);
 
   const campeoes = [...analisados]
     .filter((i) => i.unidadesVendidas > 0)
@@ -155,6 +163,7 @@ export async function getResumoEstoque(): Promise<ResumoEstoque> {
     parados,
     baixaSaida,
     repor,
+    negativos,
     campeoes,
     porCategoria: Array.from(categorias.entries())
       .map(([categoria, v]) => ({ categoria, ...v }))
@@ -166,7 +175,7 @@ export async function getResumoEstoque(): Promise<ResumoEstoque> {
   };
 }
 
-export type FiltroDeProduto = "todos" | "parados" | "baixa-saida" | "repor" | "campeoes";
+export type FiltroDeProduto = "todos" | "parados" | "baixa-saida" | "repor" | "negativos" | "campeoes";
 
 export interface PaginaDeProdutos {
   itens: ItemAnalisado[];
@@ -181,11 +190,13 @@ export const FILTRO_LABEL: Record<FiltroDeProduto, string> = {
   parados: "Estoque parado",
   "baixa-saida": "Baixa saída",
   repor: "Repor",
+  negativos: "Estoque negativo",
   campeoes: "Campeões de saída"
 };
 
 /** Situação do produto, para a coluna da listagem completa. */
 export function situacaoDoItem(item: ItemAnalisado): { label: string; tom: "bom" | "atencao" | "ruim" | "neutro" } {
+  if (item.quantity < 0) return { label: "Negativo", tom: "ruim" };
   if (item.quantity === 0 && item.unidadesVendidas > 0) return { label: "Repor", tom: "atencao" };
   if (item.quantity === 0) return { label: "Sem estoque", tom: "neutro" };
   if (item.unidadesVendidas === 0) return { label: "Parado", tom: "ruim" };
@@ -218,6 +229,8 @@ export async function getProdutos(opcoes: {
       .sort((a, b) => b.valorEmCusto - a.valorEmCusto);
   } else if (filtro === "repor") {
     itens = itens.filter((i) => i.quantity === 0 && i.unidadesVendidas > 0).sort((a, b) => b.unidadesVendidas - a.unidadesVendidas);
+  } else if (filtro === "negativos") {
+    itens = itens.filter((i) => i.quantity < 0).sort((a, b) => a.quantity - b.quantity);
   } else if (filtro === "campeoes") {
     itens = itens.filter((i) => i.unidadesVendidas > 0).sort((a, b) => b.unidadesVendidas - a.unidadesVendidas);
   }

@@ -6,7 +6,14 @@
  */
 import { obterAccessToken } from "./serviceAccount";
 
-export type TipoDeArquivo = "VENDAS" | "DESPESAS" | "PESQUISA" | "ESTOQUE" | "HISTORICO" | "DESCONHECIDO";
+export type TipoDeArquivo =
+  | "VENDAS"
+  | "DESPESAS"
+  | "PESQUISA"
+  | "ESTOQUE"
+  | "ESTOQUE_VENDAS"
+  | "HISTORICO"
+  | "DESCONHECIDO";
 
 export interface ArquivoDoDrive {
   id: string;
@@ -32,7 +39,9 @@ const MESES = [
 export function adivinharTipo(nome: string): TipoDeArquivo {
   const n = nome.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 
-  if (/ESTOQUE|SISLOJA|LEVANTAMENTO/.test(n)) return "ESTOQUE";
+  // "Exportacao_Excel_24_08_2026" e o relatorio de vendas item a item do SISloja.
+  if (/EXPORTACAO/.test(n)) return "ESTOQUE_VENDAS";
+  if (/ESTOQUE|SISLOJA|LEVANTAMENTO|^PRODUTOS/.test(n)) return "ESTOQUE";
   if (/RESULTADOS/.test(n)) return "HISTORICO";
   if (/DESPESA|MKUP|MARKUP|FINANCEIR/.test(n)) return "DESPESAS";
   if (/PESQUISA|SATISFA|RESPOSTA|FORMULARIO|NPS/.test(n)) return "PESQUISA";

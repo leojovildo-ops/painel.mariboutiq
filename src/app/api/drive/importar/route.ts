@@ -8,6 +8,7 @@ import { parseSurvey } from "@/lib/xlsx/parseSurvey";
 import { applySurvey } from "@/lib/import/applySurvey";
 import { parseStock } from "@/lib/xlsx/parseStock";
 import { applyStock } from "@/lib/import/applyStock";
+import { parseRelatorioVendas } from "@/lib/xlsx/parseRelatorioVendas";
 import { parseHistorico } from "@/lib/xlsx/parseHistorico";
 import { applyHistorico } from "@/lib/import/applyHistorico";
 
@@ -17,7 +18,7 @@ const schema = z.object({
   fileId: z.string().min(10),
   nome: z.string().min(1),
   nativa: z.boolean(),
-  tipo: z.enum(["VENDAS", "DESPESAS", "PESQUISA", "ESTOQUE", "HISTORICO"])
+  tipo: z.enum(["VENDAS", "DESPESAS", "PESQUISA", "ESTOQUE", "ESTOQUE_VENDAS", "HISTORICO"])
 });
 
 /**
@@ -56,10 +57,35 @@ export async function POST(request: Request) {
       if (parsed.itens.length === 0) {
         return jsonError(parsed.warnings.join(" ") || "Nenhum produto encontrado no arquivo.");
       }
-      const resultado = await applyStock(parsed, nomeArquivo);
+      const resultado = await applyStock({
+        itens: parsed.itens,
+        // O arquivo só de produtos não traz vendas; nesse caso as vendas já
+        // gravadas continuam valendo.
+        vendas: parsed.vendas.length > 0 ? parsed.vendas : undefined,
+        periodo: parsed.periodo,
+        fileName: nomeArquivo
+      });
+      return NextResponse.json({ tipo, estoque: { ...resultado, warnings: parsed.warnings } });
+    }
+
+    if (tipo === "ESTOQUE_VENDAS") {
+      const parsed = parseRelatorioVendas(buffer);
+      if (parsed.vendas.length === 0) {
+        return jsonError(parsed.warnings.join(" ") || "Nenhum item de venda foi reconhecido.");
+      }
+      const resultado = await applyStock({
+        vendas: parsed.vendas,
+        periodo: parsed.periodo,
+        fileName: nomeArquivo
+      });
       return NextResponse.json({
         tipo,
-        estoque: { ...resultado, warnings: parsed.warnings }
+        estoque: {
+          ...resultado,
+          pedidos: parsed.pedidos,
+          devolucoes: parsed.devolucoes,
+          warnings: parsed.warnings
+        }
       });
     }
 

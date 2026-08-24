@@ -93,7 +93,18 @@ export function parseStock(buffer: Buffer): ParsedStock {
   const wb = XLSX.read(buffer, { type: "buffer", cellDates: true });
   const warnings: string[] = [];
 
-  const abaEstoque = wb.SheetNames.find((n) => normalize(n).includes("ESTOQUE"));
+  // O levantamento completo tem uma aba "ESTOQUE SISLOJA"; a exportação só de
+  // produtos vem numa "Planilha1". Vale a aba com cara de tabela de produto.
+  const temCabecalhoDeProduto = (nome: string) => {
+    const linhas = XLSX.utils.sheet_to_json<Linha>(wb.Sheets[nome], { defval: "", range: 0 });
+    if (linhas.length === 0) return false;
+    const chaves = Object.keys(linhas[0]).map((k) => normalize(k));
+    return chaves.some((k) => k.includes("BARRAS")) && chaves.some((k) => k.includes("QTD"));
+  };
+
+  const abaEstoque =
+    wb.SheetNames.find((n) => normalize(n).includes("ESTOQUE")) ??
+    wb.SheetNames.find((n) => temCabecalhoDeProduto(n));
   const abaVendas = wb.SheetNames.find((n) => normalize(n) === "VENDAS");
 
   const itens: ItemDeEstoque[] = [];
@@ -141,8 +152,9 @@ export function parseStock(buffer: Buffer): ParsedStock {
     }
   }
 
-  if (!abaVendas) warnings.push('Não achei a aba "VENDAS" — sem ela não dá para calcular giro nem itens parados.');
-  else {
+  // Sem aba de vendas o arquivo é só a foto do estoque; quem calcula giro é o
+  // relatório de vendas, importado à parte.
+  if (abaVendas) {
     const linhas = XLSX.utils.sheet_to_json<Linha>(wb.Sheets[abaVendas], { defval: "" });
     if (linhas.length > 0) {
       const k = {
