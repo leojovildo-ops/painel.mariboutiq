@@ -1,5 +1,6 @@
 import Image from "next/image";
 import logo from "../../../public/logo-mari-boutique.png";
+import { marca } from "@/lib/marca";
 
 /**
  * Logotipo oficial da Mari Boutique, na variação clara.
@@ -10,6 +11,20 @@ import logo from "../../../public/logo-mari-boutique.png";
  * texto ao lado se limita a nomear o sistema, sem repetir a marca.
  */
 export function Logo({ width = 150 }: { width?: number }) {
+  // Na demonstração não entra o logotipo da Mari Boutique: fica um monograma
+  // neutro, para a tela não passar por painel da loja real.
+  if (!marca.usarLogotipo) {
+    return (
+      <span
+        className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-terracota to-coral font-display font-bold text-base shadow-glow"
+        style={{ width: width * 0.34, height: width * 0.34, fontSize: width * 0.14 }}
+        aria-label={marca.loja}
+      >
+        SM
+      </span>
+    );
+  }
+
   return (
     <Image
       src={logo}
@@ -27,7 +42,13 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
     <span className="flex flex-col gap-1.5">
       <Logo width={compact ? 116 : 152} />
       <span className="label pl-0.5">
-        Painel <span className="text-coral">360</span>
+        {marca.usarLogotipo ? (
+          <>
+            Painel <span className="text-coral">360</span>
+          </>
+        ) : (
+          marca.loja
+        )}
       </span>
     </span>
   );

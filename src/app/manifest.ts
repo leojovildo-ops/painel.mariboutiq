@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { marca } from "@/lib/marca";
 
 /**
  * Manifesto do app. É o que permite instalar o painel na tela de início do
@@ -7,9 +8,9 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Painel Mariboutique 360",
-    short_name: "Mariboutique",
-    description: "Metas, ranking, níveis e resultados da Mari Boutique.",
+    name: marca.sistema,
+    short_name: marca.loja,
+    description: `Metas, ranking, níveis e resultados da ${marca.loja}.`,
     lang: "pt-BR",
     // Abre direto no ranking: é a tela que a equipe mais consulta no celular.
     start_url: "/ranking",

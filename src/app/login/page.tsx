@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Logo } from "@/components/brand/Logo";
+import { marca } from "@/lib/marca";
 import { LoginForm } from "./LoginForm";
 
-export const metadata: Metadata = { title: "Entrar · Painel Mariboutique 360" };
+export const metadata: Metadata = { title: `Entrar · ${marca.sistema}` };
 
 export default async function LoginPage() {
   const session = await auth();
@@ -16,7 +17,13 @@ export default async function LoginPage() {
         <div className="mb-9 flex flex-col items-center gap-2">
           <Logo width={210} />
           <span className="label">
-            Painel <span className="text-coral">360</span>
+            {marca.usarLogotipo ? (
+              <>
+                Painel <span className="text-coral">360</span>
+              </>
+            ) : (
+              marca.loja
+            )}
           </span>
         </div>
 
@@ -29,7 +36,7 @@ export default async function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-creme-700">
-          Acesso restrito à equipe Mari Boutique.
+          Acesso restrito à equipe {marca.loja}.
         </p>
       </div>
     </main>
