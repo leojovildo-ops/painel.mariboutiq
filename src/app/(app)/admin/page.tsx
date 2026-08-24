@@ -7,6 +7,7 @@ import { UploadCard } from "@/components/admin/UploadCard";
 import { UploadDespesasCard } from "@/components/admin/UploadDespesasCard";
 import { UploadPesquisaCard } from "@/components/admin/UploadPesquisaCard";
 import { SaldosCard } from "@/components/admin/SaldosCard";
+import { DriveCard } from "@/components/admin/DriveCard";
 import { anosComPeriodo, getSaldosDoAno, listarContas } from "@/lib/data/saldos";
 import { EditStatsCard } from "@/components/admin/EditStatsCard";
 import { UsersCard } from "@/components/admin/UsersCard";
@@ -47,6 +48,8 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
           Importação das planilhas, correção de números e acessos da equipe.
         </p>
       </header>
+
+      <DriveCard />
 
       <UploadCard />
 

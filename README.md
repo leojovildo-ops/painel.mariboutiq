@@ -161,6 +161,25 @@ descobrir, a tela de importação pede o mês antes de salvar.
 Reimportar um mês **substitui** os números daquele mês, inclusive correções manuais — a tela
 avisa antes de confirmar.
 
+## Google Drive
+
+Em Administração existe o botão **Atualizar do Drive**, que lê a pasta da loja e traz as planilhas
+sem download e upload manual. Ele depende de duas variáveis (ver `.env.example`):
+`GOOGLE_SERVICE_ACCOUNT_JSON` e `GOOGLE_DRIVE_FOLDER_ID`. Sem elas, o botão avisa que não está
+configurado e o upload manual continua funcionando normalmente.
+
+- O acesso é por **conta de serviço**, com escopo `drive.readonly`: a pasta continua privada
+  (compartilhada só com o e-mail do robô) e o sistema não consegue alterar nada no Drive.
+- **O Drive não pula a conferência.** Vendas e despesas passam pela mesma tela de sempre, com os
+  mesmos avisos, e só valem depois de confirmadas — foi assim que apareceram o dia 29 sem data em
+  junho e a aba de período de experiência da Rafaela. O Drive muda de onde vem o arquivo, não o
+  cuidado antes de gravar.
+- A pesquisa de satisfação é gravada direto, porque só atualiza médias de meses que já existem.
+- O tipo de cada arquivo é adivinhado pelo nome (`DESPESAS...` , `AGOSTO VENDAS 2026`,
+  `Respostas ao formulário`); quando não dá para saber, a tela pergunta.
+- Planilha nativa do Google é exportada como .xlsx na hora da leitura, então os dois formatos
+  funcionam.
+
 ## No ar
 
 **https://painel-mariboutique-360.vercel.app** — projeto `mariboutiq/painel-mariboutique-360` na Vercel.
