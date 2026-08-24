@@ -336,11 +336,37 @@ function parseSheet(
 
   days.sort((a, b) => a.day - b.day);
 
-  // Duas linhas com a mesma data quebrariam a gravacao (um registro por dia).
-  const vistos = new Set<number>();
-  for (let i = days.length - 1; i >= 0; i--) {
-    if (vistos.has(days[i].day)) days.splice(i, 1);
-    else vistos.add(days[i].day);
+  // Duas linhas com a mesma data acontecem quando alguem digita o dia errado
+  // (em junho/2026 o dia 29 foi lancado como 26). Descartar uma delas perderia
+  // a venda daquele dia em silencio, entao os valores sao somados e o aviso
+  // aponta a data repetida para ser corrigida na origem.
+  const porDia = new Map<number, ParsedDay>();
+  const repetidos = new Set<number>();
+  for (const dia of days) {
+    const atual = porDia.get(dia.day);
+    if (!atual) {
+      porDia.set(dia.day, { ...dia });
+      continue;
+    }
+    repetidos.add(dia.day);
+    const juntar = (a: number | null, b: number | null) => (a == null && b == null ? null : (a ?? 0) + (b ?? 0));
+    porDia.set(dia.day, {
+      day: dia.day,
+      revenue: juntar(atual.revenue, dia.revenue),
+      sales: juntar(atual.sales, dia.sales),
+      salao: juntar(atual.salao, dia.salao),
+      online: juntar(atual.online, dia.online),
+      pieces: juntar(atual.pieces, dia.pieces)
+    });
+  }
+
+  days.length = 0;
+  days.push(...Array.from(porDia.values()).sort((a, b) => a.day - b.day));
+
+  for (const dia of Array.from(repetidos).sort((a, b) => a - b)) {
+    warnings.push(
+      `Aba "${sheetName}": o dia ${dia} aparece em mais de uma linha e os valores foram somados. Confira na planilha — normalmente é uma data digitada errada, e uma dessas linhas deveria ser outro dia.`
+    );
   }
 
   // Os totais saem da soma dos dias de TODOS os blocos. Somar é mais confiável
