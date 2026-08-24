@@ -57,3 +57,77 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Impressão do relatório de estoque.
+   A tela é escura, mas papel escuro gasta tinta e fica ilegível: na impressão
+   tudo vira preto no branco, as tabelas ganham linhas e cada tópico começa
+   numa página nova.
+   --------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    background-image: none !important;
+    color: #111 !important;
+  }
+
+  .impresso {
+    color: #111 !important;
+  }
+
+  .impresso .card,
+  .impresso section {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  .impresso h1,
+  .impresso h2,
+  .impresso h3,
+  .impresso strong,
+  .impresso th {
+    color: #111 !important;
+  }
+
+  .impresso p,
+  .impresso td,
+  .impresso span {
+    color: #333 !important;
+  }
+
+  .impresso table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+
+  .impresso th,
+  .impresso td {
+    border-bottom: 1px solid #ddd;
+    padding: 4px 6px;
+  }
+
+  .impresso thead {
+    display: table-header-group; /* repete o cabeçalho a cada página */
+  }
+
+  .impresso tr {
+    break-inside: avoid;
+  }
+
+  .quebra-pagina {
+    break-before: page;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}

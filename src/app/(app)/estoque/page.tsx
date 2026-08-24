@@ -111,9 +111,14 @@ export default async function EstoquePage() {
           </p>
         </div>
 
-        <Link href="/estoque/produtos" className="btn-primary">
-          Ver todos os produtos
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/estoque/relatorio" className="btn-secondary">
+            Relatório em PDF
+          </Link>
+          <Link href="/estoque/produtos" className="btn-primary">
+            Ver todos os produtos
+          </Link>
+        </div>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
