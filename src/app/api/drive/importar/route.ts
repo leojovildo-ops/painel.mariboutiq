@@ -6,6 +6,10 @@ import { baixarArquivo } from "@/lib/google/drive";
 import { criarPreviaDeDespesas, criarPreviaDeVendas } from "@/lib/import/previas";
 import { parseSurvey } from "@/lib/xlsx/parseSurvey";
 import { applySurvey } from "@/lib/import/applySurvey";
+import { parseStock } from "@/lib/xlsx/parseStock";
+import { applyStock } from "@/lib/import/applyStock";
+import { parseHistorico } from "@/lib/xlsx/parseHistorico";
+import { applyHistorico } from "@/lib/import/applyHistorico";
 
 export const runtime = "nodejs";
 
@@ -13,7 +17,7 @@ const schema = z.object({
   fileId: z.string().min(10),
   nome: z.string().min(1),
   nativa: z.boolean(),
-  tipo: z.enum(["VENDAS", "DESPESAS", "PESQUISA"])
+  tipo: z.enum(["VENDAS", "DESPESAS", "PESQUISA", "ESTOQUE", "HISTORICO"])
 });
 
 /**
@@ -45,6 +49,27 @@ export async function POST(request: Request) {
       const resultado = await criarPreviaDeDespesas(buffer, nomeArquivo, user.id);
       if (resultado.erro) return jsonError(resultado.erro);
       return NextResponse.json({ tipo, previa: resultado.previa });
+    }
+
+    if (tipo === "ESTOQUE") {
+      const parsed = parseStock(buffer);
+      if (parsed.itens.length === 0) {
+        return jsonError(parsed.warnings.join(" ") || "Nenhum produto encontrado no arquivo.");
+      }
+      const resultado = await applyStock(parsed, nomeArquivo);
+      return NextResponse.json({
+        tipo,
+        estoque: { ...resultado, warnings: parsed.warnings }
+      });
+    }
+
+    if (tipo === "HISTORICO") {
+      const parsed = parseHistorico(buffer);
+      if (parsed.meses.length === 0) {
+        return jsonError(parsed.warnings.join(" ") || "Nenhum ano encontrado no arquivo.");
+      }
+      const resultado = await applyHistorico(parsed);
+      return NextResponse.json({ tipo, historico: resultado });
     }
 
     const parsed = parseSurvey(buffer, nomeArquivo);

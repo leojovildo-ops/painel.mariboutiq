@@ -24,8 +24,7 @@ const FINANCEIRO: NavItem[] = [
   { href: "/financeiro/contas", label: "Saldos das contas" }
 ];
 
-/** Módulo que ainda não existe; fica visível para marcar o lugar dele. */
-const EM_BREVE = ["Estoque"];
+const ESTOQUE: NavItem[] = [{ href: "/estoque", label: "Dashboard" }];
 
 export function Nav({
   role,
@@ -95,22 +94,34 @@ export function Nav({
         </div>
       )}
 
-      <div>
-        <p className="label mb-2 px-3">Em breve</p>
-        <ul className="space-y-1">
-          {EM_BREVE.map((label) => (
-            <li
-              key={label}
-              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-creme-700"
-            >
-              {label}
-              <span className="rounded-full border border-base-600 px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                Fase 2
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Estoque traz custo e margem por produto, então fica restrito ao
+          Administrador, como a Administração. */}
+      {role === "ADMIN" && (
+        <div>
+          <p className="label mb-2 px-3">Estoque</p>
+          <ul className="space-y-1">
+            {ESTOQUE.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    className={`block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-coral/15 text-coral-300 shadow-[inset_0_0_0_1px_rgba(228,113,78,0.3)]"
+                        : "text-creme-500 hover:bg-base-700/60 hover:text-creme"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </nav>
   );
 }

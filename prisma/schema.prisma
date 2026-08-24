@@ -297,3 +297,57 @@ model AccountBalance {
   @@index([periodId])
   @@map("account_balances")
 }
+
+/// Foto do estoque vinda do SISloja, um registro por produto.
+model StockItem {
+  id          String   @id @default(cuid())
+  barcode     String   @unique
+  code        String?
+  description String
+  size        String?
+  color       String?
+  quantity    Int      @default(0)
+  price       Decimal? @db.Decimal(12, 2)
+  cost        Decimal? @db.Decimal(12, 2)
+  supplier    String?
+  category    String?
+  status      String?
+  brand       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("stock_items")
+}
+
+/// Venda item a item, para calcular giro, margem e o que esta parado.
+model StockSale {
+  id          String   @id @default(cuid())
+  date        DateTime
+  orderNo     String?
+  barcode     String
+  description String
+  quantity    Int      @default(1)
+  cost        Decimal? @db.Decimal(12, 2)
+  unitPrice   Decimal? @db.Decimal(12, 2)
+  total       Decimal? @db.Decimal(12, 2)
+  sellerName  String?
+  createdAt   DateTime @default(now())
+
+  @@index([barcode])
+  @@index([date])
+  @@map("stock_sales")
+}
+
+/// De quando e a foto do estoque e que periodo as vendas cobrem.
+model StockSnapshot {
+  id        String    @id @default(cuid())
+  fileName  String
+  itemCount Int       @default(0)
+  saleCount Int       @default(0)
+  salesFrom DateTime?
+  salesTo   DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("stock_snapshots")
+}

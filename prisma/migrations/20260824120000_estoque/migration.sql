@@ -1,0 +1,1 @@
+-- Estoque e vendas item a item (ver schema). Aplicada via painel do Supabase.

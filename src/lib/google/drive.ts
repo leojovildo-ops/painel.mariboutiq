@@ -6,7 +6,7 @@
  */
 import { obterAccessToken } from "./serviceAccount";
 
-export type TipoDeArquivo = "VENDAS" | "DESPESAS" | "PESQUISA" | "DESCONHECIDO";
+export type TipoDeArquivo = "VENDAS" | "DESPESAS" | "PESQUISA" | "ESTOQUE" | "HISTORICO" | "DESCONHECIDO";
 
 export interface ArquivoDoDrive {
   id: string;
@@ -32,6 +32,8 @@ const MESES = [
 export function adivinharTipo(nome: string): TipoDeArquivo {
   const n = nome.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 
+  if (/ESTOQUE|SISLOJA|LEVANTAMENTO/.test(n)) return "ESTOQUE";
+  if (/RESULTADOS/.test(n)) return "HISTORICO";
   if (/DESPESA|MKUP|MARKUP|FINANCEIR/.test(n)) return "DESPESAS";
   if (/PESQUISA|SATISFA|RESPOSTA|FORMULARIO|NPS/.test(n)) return "PESQUISA";
   if (/VENDA/.test(n)) return "VENDAS";
