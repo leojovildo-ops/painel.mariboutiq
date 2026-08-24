@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireFinance } from "@/lib/rbac";
 import { getFinanceYear, listFinanceYears } from "@/lib/data/finance";
+import { getComparativoAnual } from "@/lib/data/comparativo";
 import { agrupar, gerarObservacoesAno } from "@/lib/finance/insights";
 import { money, monthName, percent } from "@/lib/format";
 import { StatCard } from "@/components/ui/StatCard";
 import { Observacoes } from "@/components/financeiro/Observacoes";
 import { GruposBar } from "@/components/financeiro/GruposBar";
 import { EvolucaoAno } from "@/components/financeiro/EvolucaoAno";
+import { ComparativoAnos } from "@/components/financeiro/ComparativoAnos";
 
-export const metadata: Metadata = { title: "Resultado do Ano · Painel Mariboutique 360" };
+export const metadata: Metadata = { title: "Resumo de Resultado Anual · Painel Mariboutique 360" };
 export const dynamic = "force-dynamic";
 
 export default async function ResultadoAnoPage({ searchParams }: { searchParams: { ano?: string } }) {
@@ -43,13 +45,14 @@ export default async function ResultadoAnoPage({ searchParams }: { searchParams:
     .sort((a, b) => b.total - a.total);
 
   const observacoes = agrupar(gerarObservacoesAno(meses));
+  const comparativo = await getComparativoAnual();
   const ultimoMes = meses[meses.length - 1]?.month ?? 1;
 
   return (
     <div className="space-y-7">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-creme sm:text-3xl">Resultado do Ano</h1>
+          <h1 className="font-display text-2xl font-bold text-creme sm:text-3xl">Resumo de Resultado Anual</h1>
           <p className="mt-1 text-sm text-creme-500">
             A loja em {ano}, mês a mês. Meses ainda em andamento entram como parciais.
           </p>
@@ -85,6 +88,16 @@ export default async function ResultadoAnoPage({ searchParams }: { searchParams:
         <Observacoes tom="ATENCAO" itens={observacoes.ATENCAO} />
         <Observacoes tom="NEGATIVO" itens={observacoes.NEGATIVO} />
       </section>
+
+      {comparativo.length > 1 && (
+        <section className="card p-6">
+          <h2 className="font-display text-lg font-bold text-creme">Comparativo entre os anos</h2>
+          <p className="mb-6 mt-1 text-sm text-creme-500">
+            Faturamento da loja mês a mês, desde {comparativo[comparativo.length - 1].year}.
+          </p>
+          <ComparativoAnos anos={comparativo} />
+        </section>
+      )}
 
       <section className="card p-6">
         <h2 className="mb-5 font-display text-lg font-bold text-creme">Faturamento x despesas</h2>

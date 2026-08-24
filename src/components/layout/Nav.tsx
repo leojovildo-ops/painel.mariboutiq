@@ -20,7 +20,7 @@ const VENDAS: NavItem[] = [
 
 const FINANCEIRO: NavItem[] = [
   { href: "/financeiro", label: "Dashboard do mês" },
-  { href: "/financeiro/ano", label: "Resultado do ano" },
+  { href: "/financeiro/ano", label: "Resumo de resultado anual" },
   { href: "/financeiro/contas", label: "Saldos das contas" }
 ];
 

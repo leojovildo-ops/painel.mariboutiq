@@ -63,7 +63,7 @@ export default async function ContasPage({ searchParams }: { searchParams: { ano
 
         <div className="flex flex-wrap gap-1.5">
           <Link href={`/financeiro/ano?ano=${ano}`} className="btn-secondary">
-            Resultado do ano
+            Resumo anual
           </Link>
           {anos.map((a) => (
             <Link
