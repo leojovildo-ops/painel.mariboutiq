@@ -93,13 +93,19 @@ export default async function EstoquePage() {
 
   return (
     <div className="space-y-7">
-      <header>
-        <h1 className="font-display text-2xl font-bold text-creme sm:text-3xl">Estoque</h1>
-        <p className="mt-1 text-sm text-creme-500">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-creme sm:text-3xl">Estoque</h1>
+          <p className="mt-1 text-sm text-creme-500">
           {r.periodo
             ? `Foto do estoque cruzada com as vendas de ${data(r.periodo.de)} a ${data(r.periodo.ate)} (${r.periodo.dias} dias).`
             : "Foto do estoque do SISloja."}
-        </p>
+          </p>
+        </div>
+
+        <Link href="/estoque/produtos" className="btn-primary">
+          Ver todos os produtos
+        </Link>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -125,7 +131,7 @@ export default async function EstoquePage() {
           <p className="mb-4 mt-1 text-sm text-creme-500">
             Não venderam nenhuma unidade no período. {money(custoParado)} em custo, do maior para o menor.
           </p>
-          <ListaDeItens itens={r.parados} coluna="valor" />
+          <ListaDeItens itens={r.parados} coluna="valor" verTodos="parados" />
         </section>
 
         <section className="card p-6">
@@ -133,7 +139,7 @@ export default async function EstoquePage() {
           <p className="mb-4 mt-1 text-sm text-creme-500">
             Vendem, mas devagar: no ritmo atual o estoque dura mais de 6 meses.
           </p>
-          <ListaDeItens itens={r.baixaSaida} coluna="cobertura" />
+          <ListaDeItens itens={r.baixaSaida} coluna="cobertura" verTodos="baixa-saida" />
         </section>
 
         <section className="card p-6">
@@ -141,13 +147,13 @@ export default async function EstoquePage() {
           <p className="mb-4 mt-1 text-sm text-creme-500">
             Zerados que vinham vendendo — cada dia sem repor é venda perdida.
           </p>
-          <ListaDeItens itens={r.repor} coluna="vendidas" />
+          <ListaDeItens itens={r.repor} coluna="vendidas" verTodos="repor" />
         </section>
 
         <section className="card p-6">
           <h2 className="font-display text-lg font-bold text-creme">Campeões de saída</h2>
           <p className="mb-4 mt-1 text-sm text-creme-500">O que mais girou no período.</p>
-          <ListaDeItens itens={r.campeoes} coluna="vendidas" />
+          <ListaDeItens itens={r.campeoes} coluna="vendidas" verTodos="campeoes" />
         </section>
       </div>
 

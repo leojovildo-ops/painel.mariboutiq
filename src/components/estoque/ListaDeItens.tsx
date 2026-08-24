@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { money, integer } from "@/lib/format";
 import type { ItemAnalisado } from "@/lib/data/estoque";
 
@@ -13,11 +14,14 @@ type Coluna = "valor" | "cobertura" | "vendidas";
 export function ListaDeItens({
   itens,
   coluna,
-  limite = 10
+  limite = 10,
+  verTodos
 }: {
   itens: ItemAnalisado[];
   coluna: Coluna;
   limite?: number;
+  /** Filtro da listagem completa, quando esta lista tem "ver todos". */
+  verTodos?: string;
 }) {
   if (itens.length === 0) {
     return <p className="text-sm text-creme-700">Nenhum item nesta situação.</p>;
@@ -56,11 +60,24 @@ export function ListaDeItens({
         </tbody>
       </table>
 
-      {itens.length > limite && (
-        <p className="mt-3 text-xs text-creme-700">
-          Mostrando os {limite} primeiros de {integer(itens.length)}.
-        </p>
-      )}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        {itens.length > limite ? (
+          <p className="text-xs text-creme-700">
+            Mostrando os {limite} primeiros de {integer(itens.length)}.
+          </p>
+        ) : (
+          <span />
+        )}
+
+        {verTodos && (
+          <Link
+            href={`/estoque/produtos?lista=${verTodos}`}
+            className="text-sm font-semibold text-coral-300 hover:text-coral"
+          >
+            Ver todos os {integer(itens.length)} →
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 
 export interface ItemAnalisado {
   barcode: string;
+  /** Código interno do SISloja, que é como a equipe procura o produto. */
+  code: string | null;
   description: string;
   category: string | null;
   supplier: string | null;
@@ -41,16 +43,17 @@ export interface ResumoEstoque {
 /** Estoque parado a partir deste valor entra na lista de ação prioritária. */
 const COBERTURA_ALTA_MESES = 6;
 
-export async function getResumoEstoque(): Promise<ResumoEstoque> {
+/**
+ * Cruza a foto do estoque com as vendas do período e devolve todos os
+ * produtos analisados. É a base tanto do resumo quanto da listagem completa,
+ * para as duas telas nunca discordarem sobre o que é "parado".
+ */
+export async function analisarEstoque() {
   const snapshot = await prisma.stockSnapshot.findFirst({ orderBy: { createdAt: "desc" } });
-  const itens = await prisma.stockItem.findMany();
+  const itens = await prisma.stockItem.findMany({ orderBy: { description: "asc" } });
 
   if (!snapshot || itens.length === 0) {
-    return {
-      temDados: false, arquivo: null, periodo: null, itens: 0, unidades: 0,
-      valorEmCusto: 0, valorEmVenda: 0, parados: [], baixaSaida: [], repor: [],
-      campeoes: [], porCategoria: [], margemMedia: null
-    };
+    return { snapshot: null, dias: null as number | null, analisados: [] as ItemAnalisado[] };
   }
 
   const vendas = await prisma.stockSale.groupBy({
@@ -72,12 +75,11 @@ export async function getResumoEstoque(): Promise<ResumoEstoque> {
     const ultimaVenda = venda?._max.date ?? null;
     const cost = item.cost == null ? null : Number(item.cost);
     const price = item.price == null ? null : Number(item.price);
-
-    // Ritmo do período projetado para 30 dias.
     const porMes = dias && unidadesVendidas > 0 ? (unidadesVendidas / dias) * 30 : 0;
 
     return {
       barcode: item.barcode,
+      code: item.code,
       description: item.description,
       category: item.category,
       supplier: item.supplier,
@@ -94,6 +96,21 @@ export async function getResumoEstoque(): Promise<ResumoEstoque> {
       margemPercentual: cost != null && price != null && price > 0 ? ((price - cost) / price) * 100 : null
     };
   });
+
+  return { snapshot, dias, analisados };
+}
+
+export async function getResumoEstoque(): Promise<ResumoEstoque> {
+  const { snapshot, dias, analisados } = await analisarEstoque();
+  const itens = analisados;
+
+  if (!snapshot || itens.length === 0) {
+    return {
+      temDados: false, arquivo: null, periodo: null, itens: 0, unidades: 0,
+      valorEmCusto: 0, valorEmVenda: 0, parados: [], baixaSaida: [], repor: [],
+      campeoes: [], porCategoria: [], margemMedia: null
+    };
+  }
 
   const parados = analisados
     .filter((i) => i.quantity > 0 && i.unidadesVendidas === 0)
@@ -146,5 +163,85 @@ export async function getResumoEstoque(): Promise<ResumoEstoque> {
       comMargem.length > 0
         ? comMargem.reduce((s, i) => s + (i.margemPercentual ?? 0), 0) / comMargem.length
         : null
+  };
+}
+
+export type FiltroDeProduto = "todos" | "parados" | "baixa-saida" | "repor" | "campeoes";
+
+export interface PaginaDeProdutos {
+  itens: ItemAnalisado[];
+  total: number;
+  pagina: number;
+  paginas: number;
+  porPagina: number;
+}
+
+export const FILTRO_LABEL: Record<FiltroDeProduto, string> = {
+  todos: "Todos os produtos",
+  parados: "Estoque parado",
+  "baixa-saida": "Baixa saída",
+  repor: "Repor",
+  campeoes: "Campeões de saída"
+};
+
+/** Situação do produto, para a coluna da listagem completa. */
+export function situacaoDoItem(item: ItemAnalisado): { label: string; tom: "bom" | "atencao" | "ruim" | "neutro" } {
+  if (item.quantity === 0 && item.unidadesVendidas > 0) return { label: "Repor", tom: "atencao" };
+  if (item.quantity === 0) return { label: "Sem estoque", tom: "neutro" };
+  if (item.unidadesVendidas === 0) return { label: "Parado", tom: "ruim" };
+  if ((item.coberturaMeses ?? 0) > COBERTURA_ALTA_MESES) return { label: "Baixa saída", tom: "atencao" };
+  return { label: "Girando", tom: "bom" };
+}
+
+/**
+ * Listagem completa dos produtos, com filtro por situação e busca por nome ou
+ * código. Paginada porque são mil produtos — a tela precisa abrir rápido no
+ * celular, no meio da loja.
+ */
+export async function getProdutos(opcoes: {
+  filtro?: FiltroDeProduto;
+  busca?: string;
+  pagina?: number;
+  porPagina?: number;
+}): Promise<PaginaDeProdutos> {
+  const { analisados } = await analisarEstoque();
+  const filtro = opcoes.filtro ?? "todos";
+  const porPagina = opcoes.porPagina ?? 100;
+
+  let itens = analisados;
+
+  if (filtro === "parados") {
+    itens = itens.filter((i) => i.quantity > 0 && i.unidadesVendidas === 0).sort((a, b) => b.valorEmCusto - a.valorEmCusto);
+  } else if (filtro === "baixa-saida") {
+    itens = itens
+      .filter((i) => i.quantity > 0 && i.unidadesVendidas > 0 && (i.coberturaMeses ?? 0) > COBERTURA_ALTA_MESES)
+      .sort((a, b) => b.valorEmCusto - a.valorEmCusto);
+  } else if (filtro === "repor") {
+    itens = itens.filter((i) => i.quantity === 0 && i.unidadesVendidas > 0).sort((a, b) => b.unidadesVendidas - a.unidadesVendidas);
+  } else if (filtro === "campeoes") {
+    itens = itens.filter((i) => i.unidadesVendidas > 0).sort((a, b) => b.unidadesVendidas - a.unidadesVendidas);
+  }
+
+  const busca = opcoes.busca?.trim().toLowerCase();
+  if (busca) {
+    itens = itens.filter(
+      (i) =>
+        i.description.toLowerCase().includes(busca) ||
+        (i.code ?? "").toLowerCase().includes(busca) ||
+        i.barcode.toLowerCase().includes(busca) ||
+        (i.category ?? "").toLowerCase().includes(busca)
+    );
+  }
+
+  const total = itens.length;
+  const paginas = Math.max(1, Math.ceil(total / porPagina));
+  const pagina = Math.min(Math.max(1, opcoes.pagina ?? 1), paginas);
+
+  return {
+    itens: itens.slice((pagina - 1) * porPagina, pagina * porPagina),
+    total,
+    pagina,
+    paginas,
+    porPagina
   };
 }
