@@ -108,6 +108,7 @@ model Period {
   expenses Expense[]
   finance  FinanceMonth?
   balances AccountBalance[]
+  caixa    CashFlowInsight?
 
   @@unique([year, month])
   @@map("periods")
@@ -350,4 +351,35 @@ model StockSnapshot {
   createdAt DateTime  @default(now())
 
   @@map("stock_snapshots")
+}
+
+/// Leitura de caixa do mes, feita a mao fora do sistema e guardada aqui.
+///
+/// Diferente das outras telas, esta NAO recalcula nada: o texto e o status
+/// vieram de uma analise que cruzou os extratos com o resultado do mes, e
+/// refazer a conta a cada acesso perderia justamente o que ela tem de melhor,
+/// que e a explicacao do porque (parcela de emprestimo, retirada de socio).
+model CashFlowInsight {
+  id       String @id @default(cuid())
+  periodId String @unique
+  period   Period @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  revenue  Decimal? @db.Decimal(12, 2)
+  expenses Decimal? @db.Decimal(12, 2)
+  /// Resultado do mes em reais (receita menos despesa), nao um percentual.
+  margin   Decimal? @db.Decimal(12, 2)
+
+  cashDeltaBradesco Decimal? @db.Decimal(12, 2)
+  cashDeltaStone    Decimal? @db.Decimal(12, 2)
+  cashDeltaInfinity Decimal? @db.Decimal(12, 2)
+  cashDeltaTotal    Decimal? @db.Decimal(12, 2)
+
+  /// POSITIVO | ATENCAO | NEGATIVO
+  status String
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cash_flow_insights")
 }

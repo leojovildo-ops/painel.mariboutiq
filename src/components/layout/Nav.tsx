@@ -21,7 +21,8 @@ const VENDAS: NavItem[] = [
 const FINANCEIRO: NavItem[] = [
   { href: "/financeiro", label: "Dashboard do mês" },
   { href: "/financeiro/ano", label: "Resumo de resultado anual" },
-  { href: "/financeiro/contas", label: "Saldos das contas" }
+  { href: "/financeiro/contas", label: "Saldos das contas" },
+  { href: "/financeiro/caixa", label: "Fluxo de caixa" }
 ];
 
 const ESTOQUE: NavItem[] = [{ href: "/estoque", label: "Dashboard" }];

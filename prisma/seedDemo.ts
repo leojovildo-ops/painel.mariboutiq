@@ -19,7 +19,15 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 const ANO = new Date().getFullYear();
-const MES_ATUAL = new Date().getMonth() + 1;
+
+/**
+ * A demonstração vai até o mês passado, e não até o corrente.
+ *
+ * O painel marca o mês corrente como "em andamento" e escreve "parcial" ao
+ * lado da margem — correto no uso real, mas numa demo com valores fechados
+ * aparece um mês cheio rotulado de parcial, o que confunde quem está vendo.
+ */
+const ULTIMO_MES = Math.max(1, new Date().getMonth());
 
 /**
  * Quatro vendedoras, com valores fechados que somam exatos R$ 100.000 no mês.
@@ -184,10 +192,14 @@ async function main() {
   }
 
   // Ano corrente, completo: vendedoras, metas, despesas, pesquisa e saldos.
-  for (let mes = 1; mes <= MES_ATUAL; mes++) {
+  for (let mes = 1; mes <= ULTIMO_MES; mes++) {
     const period = await prisma.period.create({ data: { year: ANO, month: mes } });
-    const emAndamento = mes === MES_ATUAL;
-    const fracao = emAndamento ? 0.62 : 1;
+    // Todos os meses entram fechados, inclusive o corrente: a demonstração
+    // abre no mês mais recente, e um mês pela metade mostraria R$ 62.000 e
+    // ninguém batendo meta, em vez dos valores redondos que ela existe para
+    // apresentar.
+    const emAndamento = false;
+    const fracao = 1;
     const diasUteis = 26;
 
     let receitaLoja = 0;
@@ -278,14 +290,20 @@ async function main() {
     for (const grupo of GRUPOS) {
       const totalGrupo = grupo.valor * pesoDoMes * fracao;
       const lancamentos = 6;
+      // Dividir por seis e arredondar deixaria centavos sobrando e o total do
+      // mês sairia R$ 88.000,02. O resto vai todo no primeiro lançamento, e a
+      // soma fecha no valor redondo.
+      const porLancamento = Math.floor((totalGrupo * 100) / lancamentos) / 100;
+      const resto = Number((totalGrupo - porLancamento * (lancamentos - 1)).toFixed(2));
+
       await prisma.expense.createMany({
         data: Array.from({ length: lancamentos }, (_, i) => ({
           periodId: period.id,
           group: grupo.nome,
           description: `${grupo.nome.split(" ")[0]} — lançamento ${i + 1}`,
-          amount: (totalGrupo / lancamentos).toFixed(2),
+          amount: (i === 0 ? resto : porLancamento).toFixed(2),
           dueDate: new Date(Date.UTC(ANO, mes - 1, Math.min(28, 3 + i * 2))),
-          paidAt: i === 0 && mes === MES_ATUAL ? null : new Date(Date.UTC(ANO, mes - 1, Math.min(28, 3 + i * 2))),
+          paidAt: i === 0 && mes === ULTIMO_MES ? null : new Date(Date.UTC(ANO, mes - 1, Math.min(28, 3 + i * 2))),
           sourceRow: i + 2
         }))
       });
@@ -357,7 +375,7 @@ async function main() {
     }
   });
 
-  console.log(`Demo pronta: ${sellers.length} vendedoras, ${MES_ATUAL} meses do ano corrente,`);
+  console.log(`Demo pronta: ${sellers.length} vendedoras, ${ULTIMO_MES} meses do ano corrente,`);
   console.log(`3 anos de histórico, ${itens.length} produtos e ${vendasEstoque.length} vendas de item.`);
   console.log("Acessos: demo@painel360.com.br / supervisora@ / vendedora@ — senha demo1234");
 }
