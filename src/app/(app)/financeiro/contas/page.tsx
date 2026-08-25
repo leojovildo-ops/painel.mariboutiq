@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireFinance } from "@/lib/rbac";
 import { anosComPeriodo, getSaldosDoAno, listarContas } from "@/lib/data/saldos";
-import { getFinanceYear } from "@/lib/data/finance";
+import { getResumoDeEspecie } from "@/lib/data/especie";
 import { money } from "@/lib/format";
 import { StatCard } from "@/components/ui/StatCard";
 import { SaldosDoMes } from "@/components/financeiro/SaldosDoMes";
@@ -31,25 +31,9 @@ export default async function ContasPage({ searchParams }: { searchParams: { ano
   const variacaoAno =
     primeiro?.totalInicio != null && ultimo?.totalFim != null ? ultimo.totalFim - primeiro.totalInicio : null;
 
-  // O dinheiro em espécie é o que paga a mercadoria, então ele é comparado com
-  // o que a loja gasta com fornecedor por mês.
-  const contaEspecie = contas.find((c) => c.kind === "ESPECIE");
-  const mesEspecie = contaEspecie
-    ? [...meses].reverse().find((m) => m.saldos.find((s) => s.accountId === contaEspecie.id)?.closing != null)
-    : undefined;
-  const saldoEspecie = contaEspecie && mesEspecie
-    ? (mesEspecie.saldos.find((s) => s.accountId === contaEspecie.id)?.closing ?? null)
-    : null;
-
-  const financeiro = await getFinanceYear(ano);
-  const comprasPorMes = financeiro
-    .filter((m) => !m.emAndamento)
-    .map((m) => m.groups.find((g) => g.group === "FORNECEDOR")?.total ?? 0)
-    .filter((valor) => valor > 0);
-  const mediaCompras =
-    comprasPorMes.length > 0
-      ? comprasPorMes.reduce((a, b) => a + b, 0) / comprasPorMes.length
-      : null;
+  // O dinheiro em espécie paga a mercadoria: o cofre é lido junto com a
+  // entrada mensal em dinheiro e o custo de uma viagem de compras.
+  const especie = await getResumoDeEspecie(ano);
 
   return (
     <div className="space-y-6">
@@ -79,14 +63,7 @@ export default async function ContasPage({ searchParams }: { searchParams: { ano
         </div>
       </header>
 
-      {contaEspecie && (
-        <EspecieParaCompras
-          saldo={saldoEspecie}
-          mesDoSaldo={mesEspecie?.month ?? null}
-          mediaCompras={mediaCompras}
-          mesesConsiderados={comprasPorMes.length}
-        />
-      )}
+      <EspecieParaCompras resumo={especie} />
 
       <section className="grid gap-4 sm:grid-cols-3">
         <StatCard

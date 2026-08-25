@@ -1,24 +1,21 @@
 import { money, monthName } from "@/lib/format";
+import type { ResumoDeEspecie } from "@/lib/data/especie";
+
+function plural(n: number, singular: string, plural: string) {
+  return n === 1 ? singular : plural;
+}
 
 /**
- * O dinheiro em espécie da loja serve para comprar mercadoria, então o número
- * sozinho não responde a pergunta real: "dá para comprar?". O cartão põe o
- * saldo ao lado do que a loja costuma gastar com fornecedor por mês, que é a
- * régua que dá sentido a ele.
+ * O dinheiro em espécie da loja existe para comprar mercadoria, então o saldo
+ * sozinho não responde nada. O cartão junta as três coisas que decidem a
+ * compra: quanto tem no cofre, quanto entra em dinheiro por mês e quanto uma
+ * viagem costuma levar.
  */
-export function EspecieParaCompras({
-  saldo,
-  mesDoSaldo,
-  mediaCompras,
-  mesesConsiderados
-}: {
-  saldo: number | null;
-  mesDoSaldo: number | null;
-  /** Média mensal do grupo FORNECEDOR nos meses já fechados. */
-  mediaCompras: number | null;
-  mesesConsiderados: number;
-}) {
-  const cobertura = saldo != null && mediaCompras != null && mediaCompras > 0 ? saldo / mediaCompras : null;
+export function EspecieParaCompras({ resumo }: { resumo: ResumoDeEspecie }) {
+  const { saldo, mesDoSaldo, entradaMedia, mesesInformados, valorPorViagem, viagensNoCaixa, mesesPorViagem } =
+    resumo;
+
+  const daParaViajar = viagensNoCaixa != null && viagensNoCaixa >= 1;
 
   return (
     <section className="card border-coral/35 bg-gradient-to-br from-coral/[0.10] to-transparent p-6">
@@ -27,7 +24,7 @@ export function EspecieParaCompras({
       <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <p className="num font-display text-3xl font-bold text-creme sm:text-4xl">{money(saldo)}</p>
         {mesDoSaldo != null && (
-          <span className="text-sm text-creme-500">último saldo lançado · {monthName(mesDoSaldo)}</span>
+          <span className="text-sm text-creme-500">no cofre · {monthName(mesDoSaldo)}</span>
         )}
       </div>
 
@@ -35,35 +32,66 @@ export function EspecieParaCompras({
         <p className="mt-3 text-sm text-creme-700">
           Lance o saldo da conta Espécie em Administração para acompanhar aqui.
         </p>
-      ) : mediaCompras == null ? (
-        <p className="mt-3 text-sm text-creme-700">
-          Sem compras de fornecedor registradas ainda para servir de comparação.
-        </p>
       ) : (
-        <div className="mt-4 border-t border-base-600/50 pt-4">
-          <p className="text-sm text-creme-500">
-            A loja gasta em média{" "}
-            <strong className="num font-semibold text-creme">{money(mediaCompras)}</strong> por mês com
-            fornecedor{" "}
-            <span className="text-creme-700">
-              ({mesesConsiderados} {mesesConsiderados === 1 ? "mês fechado" : "meses fechados"})
-            </span>
-            .
-          </p>
-          {cobertura != null && (
-            <p className="mt-1.5 text-sm">
-              <span className={cobertura >= 1 ? "text-emerald-300" : "text-nivel-ouro"}>
-                O caixa em espécie cobre{" "}
-                <strong className="num font-semibold">
-                  {cobertura >= 1
-                    ? `${cobertura.toFixed(1).replace(".", ",")} ${cobertura >= 2 ? "meses" : "mês"}`
-                    : `${Math.round(cobertura * 100)}%`}
-                </strong>{" "}
-                {cobertura >= 1 ? "de compra nesse ritmo." : "de um mês de compra nesse ritmo."}
-              </span>
+        <>
+          {viagensNoCaixa != null && valorPorViagem != null && (
+            <p
+              className={`mt-4 text-lg font-semibold ${daParaViajar ? "text-emerald-300" : "text-nivel-ouro"}`}
+            >
+              {daParaViajar ? (
+                <>
+                  Dá para {viagensNoCaixa >= 2 ? `${Math.floor(viagensNoCaixa)} viagens` : "uma viagem"} de
+                  compras agora.
+                </>
+              ) : (
+                <>Falta {money(valorPorViagem - saldo)} para fechar uma viagem.</>
+              )}
             </p>
           )}
-        </div>
+
+          <dl className="mt-4 grid gap-4 border-t border-base-600/50 pt-4 sm:grid-cols-3">
+            <div>
+              <dt className="label">Entra em dinheiro</dt>
+              <dd className="num mt-1 text-sm font-semibold text-creme">
+                {money(entradaMedia)}
+                <span className="ml-1 text-xs font-normal text-creme-700">por mês</span>
+              </dd>
+              <dd className="mt-0.5 text-xs text-creme-700">
+                média de {mesesInformados} {plural(mesesInformados, "mês", "meses")}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="label">Cada viagem leva</dt>
+              <dd className="num mt-1 text-sm font-semibold text-creme">{money(valorPorViagem)}</dd>
+              <dd className="mt-0.5 text-xs text-creme-700">valor médio informado</dd>
+            </div>
+
+            <div>
+              <dt className="label">Repõe uma viagem em</dt>
+              <dd className="num mt-1 text-sm font-semibold text-creme">
+                {mesesPorViagem == null
+                  ? "—"
+                  : `${mesesPorViagem.toFixed(1).replace(".", ",")} ${plural(Math.round(mesesPorViagem), "mês", "meses")}`}
+              </dd>
+              <dd className="mt-0.5 text-xs text-creme-700">no ritmo atual de entrada</dd>
+            </div>
+          </dl>
+
+          {resumo.entradas.length > 0 && (
+            <div className="mt-5 border-t border-base-600/50 pt-4">
+              <p className="label mb-2">Entrada em dinheiro por mês</p>
+              <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                {resumo.entradas.map((e) => (
+                  <span key={e.month} className="num text-xs text-creme-500">
+                    {monthName(e.month).slice(0, 3)}{" "}
+                    <span className="font-semibold text-creme-300">{money(e.amount)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
