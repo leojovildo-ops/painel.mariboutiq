@@ -399,6 +399,17 @@ function parseSheet(
   if (tkm == null && salesCount > 0) tkm = revenue / salesCount;
   if (pa == null && salesCount > 0) pa = pieces / salesCount;
 
+  // Coluna Peças em branco num mês que teve venda não é "zero peça vendida":
+  // é dado que ninguém preencheu. Deixar o P.A. em zero faria a tela mostrar
+  // uma medição que não existe, e a vendedora apareceria com o pior P.A. da
+  // equipe por causa de uma coluna vazia.
+  if (pieces === 0 && salesCount > 0) {
+    pa = null;
+    warnings.push(
+      `Aba "${sheetName}": a coluna Peças não foi preenchida neste mês, então o P.A. fica sem dado.`
+    );
+  }
+
   const goals: ParsedGoal[] = [];
   for (const level of ["PRATA", "OURO", "DIAMANTE"] as const) {
     const target = valueByLabel(sheet, (l) => l === level, lastCol, 20);
