@@ -85,6 +85,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
               projection: s.projection == null ? null : Number(s.projection),
               note: s.note,
               npsScore: s.npsScore == null ? null : Number(s.npsScore),
+              levelOverride: s.levelOverride,
               editedAt: s.editedAt ? s.editedAt.toISOString() : null
             }))}
           />

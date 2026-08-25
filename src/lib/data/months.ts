@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { computeLevel, type GoalLevelName, type LevelProgress } from "@/lib/levels";
+import { aplicarNivelAjustado, computeLevel, type GoalLevelName, type LevelProgress } from "@/lib/levels";
 import { mediaDaLoja } from "@/lib/nps";
 
 /** Prisma devolve Decimal; as telas trabalham com number | null ("sem dado"). */
@@ -103,9 +103,12 @@ export async function getSellerRanking(periodId: string): Promise<SellerRow[]> {
         npsScore: toNumber(s.npsScore),
         npsResponses: s.npsResponses,
         editedAt: s.editedAt,
-        level: computeLevel(
-          revenue,
-          s.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+        level: aplicarNivelAjustado(
+          computeLevel(
+            revenue,
+            s.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+          ),
+          s.levelOverride
         ),
         position: index + 1
       };
@@ -143,9 +146,12 @@ export async function getStoreMonth(periodId: string): Promise<StoreRow | null> 
     projection: toNumber(stats.projection),
     workingDays: stats.workingDays,
     workedDays: stats.workedDays,
-    level: computeLevel(
-      revenue,
-      stats.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+    level: aplicarNivelAjustado(
+      computeLevel(
+        revenue,
+        stats.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+      ),
+      stats.levelOverride
     ),
     npsScore,
     npsCalculado,
@@ -221,9 +227,12 @@ export async function getAnnualRanking(year: number): Promise<LinhaAnual[]> {
       } as LinhaAnual);
 
     const revenue = Number(s.revenue);
-    const nivel = computeLevel(
-      revenue,
-      s.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+    const nivel = aplicarNivelAjustado(
+      computeLevel(
+        revenue,
+        s.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+      ),
+      s.levelOverride
     ).current;
 
     // Cada mês conta uma vez só, no nível que ela efetivamente bateu: um mês

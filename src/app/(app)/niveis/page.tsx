@@ -94,7 +94,9 @@ export default async function NiveisPage({ searchParams }: { searchParams: { mes
                       {money(row.revenue)} no mês
                     </p>
                     <p className="mt-0.5 text-xs text-creme-700">
-                      {level.current
+                      {level.current && level.ajustadoManualmente
+                        ? `Nível ${LEVEL_LABEL[level.current]} · ajustado manualmente`
+                        : level.current
                         ? `Nível ${LEVEL_LABEL[level.current]} conquistado`
                         : level.next
                           ? `A caminho do ${LEVEL_LABEL[level.next]}`

@@ -16,6 +16,7 @@ export interface EditableRow {
   projection: number | null;
   note: string | null;
   npsScore: number | null;
+  levelOverride: "PRATA" | "OURO" | "DIAMANTE" | null;
   editedAt: string | null;
 }
 
@@ -53,7 +54,8 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
     tkm: row.tkm == null ? "" : String(row.tkm),
     projection: row.projection == null ? "" : String(row.projection),
     note: row.note ?? "",
-    npsScore: row.npsScore == null ? "" : String(row.npsScore)
+    npsScore: row.npsScore == null ? "" : String(row.npsScore),
+    levelOverride: row.levelOverride ?? ""
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +75,8 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
         tkm: toValue(form.tkm),
         projection: toValue(form.projection),
         note: form.note,
-        npsScore: toValue(form.npsScore)
+        npsScore: toValue(form.npsScore),
+        levelOverride: form.levelOverride === "" ? null : form.levelOverride
       })
     });
 
@@ -105,6 +108,25 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
           onChange={(v) => setForm({ ...form, npsScore: v })}
         />
       </div>
+
+      {row.scope === "SELLER" && (
+        <label className="mt-4 block max-w-xs">
+          <span className="label mb-1 block">Nível do mês</span>
+          <select
+            className="input"
+            value={form.levelOverride}
+            onChange={(e) => setForm({ ...form, levelOverride: e.target.value })}
+          >
+            <option value="">Calcular pelo faturamento</option>
+            <option value="PRATA">Prata</option>
+            <option value="OURO">Ouro</option>
+            <option value="DIAMANTE">Diamante</option>
+          </select>
+          <span className="mt-1 block text-xs text-creme-700">
+            Use só quando o combinado for diferente do que o faturamento indica.
+          </span>
+        </label>
+      )}
 
       <label className="mt-4 block">
         <span className="label mb-1 block">Observação do mês</span>

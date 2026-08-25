@@ -19,6 +19,8 @@ export interface LevelGoal {
 }
 
 export interface LevelProgress {
+  /** true quando o nível foi definido à mão, e não pelo faturamento. */
+  ajustadoManualmente?: boolean;
   /** Nível já conquistado no mês, ou null enquanto a primeira meta não é batida. */
   current: GoalLevelName | null;
   /** Próximo nível a alcançar, ou null quando já bateu o mais alto. */
@@ -75,5 +77,31 @@ export function computeLevel(revenue: number, goals: LevelGoal[]): LevelProgress
     progress,
     percentOfNext: (revenue / upcoming.target) * 100,
     goals: sorted
+  };
+}
+
+/**
+ * Aplica o nível definido à mão, quando existe.
+ *
+ * O nível passa a ser o informado e o "próximo nível" some: com o nível
+ * decidido por combinação, e não pelo valor, uma barra de progresso até a
+ * meta seguinte só confundiria — ela mostraria a vendedora já além de um alvo
+ * que o painel diz que ela não alcançou.
+ */
+export function aplicarNivelAjustado(
+  progresso: LevelProgress,
+  ajuste: GoalLevelName | null | undefined
+): LevelProgress {
+  if (!ajuste) return progresso;
+
+  return {
+    ...progresso,
+    current: ajuste,
+    next: null,
+    nextTarget: null,
+    remaining: null,
+    progress: 100,
+    percentOfNext: null,
+    ajustadoManualmente: true
   };
 }

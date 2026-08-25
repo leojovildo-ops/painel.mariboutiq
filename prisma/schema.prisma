@@ -171,6 +171,12 @@ model MonthlyStats {
   /// Quantas respostas da pesquisa geraram essa nota.
   npsResponses Int?
 
+  /// Nível definido à mão para o mês, quando o cálculo pelo faturamento não
+  /// reflete o combinado (ex.: mês que soma o período de experiência).
+  /// Fica num campo próprio: mexer na meta ou no faturamento para forçar o
+  /// nível apagaria o número real e ninguém entenderia depois.
+  levelOverride GoalLevel?
+
   /// Observação do mês, mostrada nas telas junto do nome da vendedora.
   /// Preenchida sozinha quando a planilha traz mais de uma aba da mesma
   /// pessoa (ex.: período de experiência + carteira assinada), e editável
