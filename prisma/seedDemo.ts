@@ -95,6 +95,9 @@ function aleatorio(): number {
 const entre = (min: number, max: number) => min + aleatorio() * (max - min);
 
 async function limpar() {
+  await prisma.cashFlowInsight.deleteMany({});
+  await prisma.cashInflow.deleteMany({});
+  await prisma.storeSetting.deleteMany({});
   await prisma.stockSale.deleteMany({});
   await prisma.stockItem.deleteMany({});
   await prisma.stockSnapshot.deleteMany({});
@@ -312,6 +315,35 @@ async function main() {
       data: { periodId: period.id, grossRevenue: receitaLoja.toFixed(2) }
     });
 
+    // Leitura de caixa e entrada em dinheiro, para as telas de fluxo de caixa
+    // e de espécie também terem o que mostrar na demonstração.
+    const resultado = receitaLoja - GRUPOS.reduce((s, g) => s + g.valor * pesoDoMes, 0);
+    const noVermelho = resultado < 0;
+    await prisma.cashFlowInsight.create({
+      data: {
+        periodId: period.id,
+        revenue: receitaLoja.toFixed(2),
+        expenses: GRUPOS.reduce((s, g) => s + g.valor * pesoDoMes, 0).toFixed(2),
+        margin: resultado.toFixed(2),
+        cashDeltaBradesco: (noVermelho ? -18000 : 6000).toFixed(2),
+        cashDeltaStone: (noVermelho ? -9000 : 3500).toFixed(2),
+        cashDeltaInfinity: (noVermelho ? -3000 : 2500).toFixed(2),
+        cashDeltaTotal: (noVermelho ? -30000 : 12000).toFixed(2),
+        status: noVermelho ? "NEGATIVO" : "POSITIVO",
+        note: noVermelho
+          ? "Compra de mercadoria dobrou no mês e o caixa caiu nos três bancos."
+          : "Resultado dentro do esperado e caixa crescendo nas três contas."
+      }
+    });
+
+    await prisma.cashInflow.create({
+      data: {
+        periodId: period.id,
+        amount: "5200.00",
+        note: "Entrada em dinheiro na loja."
+      }
+    });
+
     // Saldos das contas: o fim de um mês vira o início do seguinte.
     for (let i = 0; i < contas.length; i++) {
       const inicio = saldoAnterior[i];
@@ -327,6 +359,14 @@ async function main() {
       saldoAnterior[i] = fim;
     }
   }
+
+  await prisma.storeSetting.create({
+    data: {
+      key: "viagem_compras_media",
+      value: "15000",
+      label: "Valor médio levado em espécie por viagem de compras"
+    }
+  });
 
   // Estoque com as quatro situações que o dashboard aponta.
   const hoje = new Date();
