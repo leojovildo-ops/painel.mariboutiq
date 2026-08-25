@@ -12,8 +12,17 @@ function plural(n: number, singular: string, plural: string) {
  * viagem costuma levar.
  */
 export function EspecieParaCompras({ resumo }: { resumo: ResumoDeEspecie }) {
-  const { saldo, mesDoSaldo, entradaMedia, mesesInformados, valorPorViagem, viagensNoCaixa, mesesPorViagem } =
-    resumo;
+  const {
+    saldo,
+    mesDoSaldo,
+    entradaMedia,
+    entradaTipica,
+    mesesAtipicos,
+    mesesInformados,
+    valorPorViagem,
+    viagensNoCaixa,
+    mesesPorViagem
+  } = resumo;
 
   const daParaViajar = viagensNoCaixa != null && viagensNoCaixa >= 1;
 
@@ -53,11 +62,11 @@ export function EspecieParaCompras({ resumo }: { resumo: ResumoDeEspecie }) {
             <div>
               <dt className="label">Entra em dinheiro</dt>
               <dd className="num mt-1 text-sm font-semibold text-creme">
-                {money(entradaMedia)}
-                <span className="ml-1 text-xs font-normal text-creme-700">por mês</span>
+                {money(entradaTipica)}
+                <span className="ml-1 text-xs font-normal text-creme-700">no mês típico</span>
               </dd>
               <dd className="mt-0.5 text-xs text-creme-700">
-                média de {mesesInformados} {plural(mesesInformados, "mês", "meses")}
+                média dos {mesesInformados} {plural(mesesInformados, "mês", "meses")}: {money(entradaMedia)}
               </dd>
             </div>
 
@@ -74,9 +83,18 @@ export function EspecieParaCompras({ resumo }: { resumo: ResumoDeEspecie }) {
                   ? "—"
                   : `${mesesPorViagem.toFixed(1).replace(".", ",")} ${plural(Math.round(mesesPorViagem), "mês", "meses")}`}
               </dd>
-              <dd className="mt-0.5 text-xs text-creme-700">no ritmo atual de entrada</dd>
+              <dd className="mt-0.5 text-xs text-creme-700">no ritmo do mês típico</dd>
             </div>
           </dl>
+
+          {mesesAtipicos.length > 0 && (
+            <p className="mt-4 rounded-xl border border-nivel-ouro/30 bg-nivel-ouro/10 px-4 py-3 text-sm text-nivel-ouro">
+              {mesesAtipicos.map((m) => `${monthName(m.month)} (${money(m.amount)})`).join(", ")}{" "}
+              {plural(mesesAtipicos.length, "ficou", "ficaram")} muito acima dos demais e{" "}
+              {plural(mesesAtipicos.length, "puxa", "puxam")} a média para cima. A projeção acima usa o mês
+              típico, não a média, para não contar com um dinheiro que não costuma entrar.
+            </p>
+          )}
 
           {resumo.entradas.length > 0 && (
             <div className="mt-5 border-t border-base-600/50 pt-4">

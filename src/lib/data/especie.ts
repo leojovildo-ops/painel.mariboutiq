@@ -6,6 +6,14 @@ export interface ResumoDeEspecie {
   mesDoSaldo: number | null;
   /** Entrada média mensal em dinheiro, dos meses já informados. */
   entradaMedia: number | null;
+  /**
+   * Entrada do mês típico (mediana). É ela que projeta a reposição: um único
+   * mês fora da curva puxa a média e faria o painel prometer um dinheiro que
+   * não costuma entrar.
+   */
+  entradaTipica: number | null;
+  /** Meses muito acima do típico, que não devem ser lidos como rotina. */
+  mesesAtipicos: Array<{ month: number; amount: number }>;
   mesesInformados: number;
   /** Quanto uma viagem de compras costuma levar em espécie. */
   valorPorViagem: number | null;
@@ -52,16 +60,33 @@ export async function getResumoDeEspecie(year: number): Promise<ResumoDeEspecie>
 
   const entradaMedia =
     entradas.length > 0 ? entradas.reduce((s, e) => s + e.amount, 0) / entradas.length : null;
+
+  const ordenadas = entradas.map((e) => e.amount).sort((a, b) => a - b);
+  const entradaTipica =
+    ordenadas.length === 0
+      ? null
+      : ordenadas.length % 2 === 1
+        ? ordenadas[(ordenadas.length - 1) / 2]
+        : (ordenadas[ordenadas.length / 2 - 1] + ordenadas[ordenadas.length / 2]) / 2;
+
+  // O dobro do mês típico é o corte: acima disso o mês foi exceção, e o painel
+  // diz isso em vez de embutir a exceção na projeção.
+  const mesesAtipicos =
+    entradaTipica != null ? entradas.filter((e) => e.amount > entradaTipica * 2) : [];
+
   const valorPorViagem = parametro ? Number(parametro.value) : null;
 
   return {
     saldo,
     mesDoSaldo,
     entradaMedia,
+    entradaTipica,
+    mesesAtipicos,
     mesesInformados: entradas.length,
     valorPorViagem,
     viagensNoCaixa: saldo != null && valorPorViagem ? saldo / valorPorViagem : null,
-    mesesPorViagem: entradaMedia && entradaMedia > 0 && valorPorViagem ? valorPorViagem / entradaMedia : null,
+    mesesPorViagem:
+      entradaTipica && entradaTipica > 0 && valorPorViagem ? valorPorViagem / entradaTipica : null,
     entradas
   };
 }
