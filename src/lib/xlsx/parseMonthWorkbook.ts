@@ -408,6 +408,14 @@ function parseSheet(
     warnings.push(
       `Aba "${sheetName}": a coluna Peças não foi preenchida neste mês, então o P.A. fica sem dado.`
     );
+  } else if (salesCount > 0 && pieces > 0 && pieces < salesCount) {
+    // Menos peças do que vendas é impossível: toda venda leva ao menos uma
+    // peça. Quando aparece, a coluna foi preenchida só em alguns dias, e o
+    // P.A. resultante (0,09 em maio/2026) passaria por medição de verdade.
+    pa = null;
+    warnings.push(
+      `Aba "${sheetName}": ${pieces} peças para ${salesCount} vendas — menos peças do que vendas é impossível, então a coluna está preenchida pela metade e o P.A. fica sem dado.`
+    );
   }
 
   const goals: ParsedGoal[] = [];
