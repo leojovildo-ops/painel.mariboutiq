@@ -92,6 +92,35 @@ export default async function MetasPage({ searchParams }: { searchParams: { mes?
               </p>
             )}
 
+            {/* O ritmo diário é o que a equipe usa para decidir o dia de hoje:
+                a meta do mês sozinha não diz o que fazer nesta segunda-feira. */}
+            {(store.ritmo.faltaPorDia != null || store.ritmo.mediaDiaria != null) && (
+              <div className="mt-6 rounded-xl border border-coral/35 bg-coral/[0.08] p-4">
+                {store.ritmo.faltaPorDia != null && store.level.next ? (
+                  <p className="text-sm text-creme-300">
+                    Para bater o <strong className="text-creme">{LEVEL_LABEL[store.level.next]}</strong>,
+                    faltam{" "}
+                    <strong className="num font-display text-lg text-coral-300">
+                      {money(store.ritmo.faltaPorDia)}
+                    </strong>{" "}
+                    por dia útil, nos {integer(store.ritmo.diasRestantes)} dias que restam.
+                  </p>
+                ) : (
+                  <p className="text-sm font-semibold text-emerald-300">
+                    {store.level.next
+                      ? "Sem dias úteis restantes no mês."
+                      : "Todas as metas do mês já foram batidas."}
+                  </p>
+                )}
+
+                {store.ritmo.mediaDiaria != null && (
+                  <p className="mt-1.5 text-xs text-creme-700">
+                    A loja vem fazendo {money(store.ritmo.mediaDiaria)} por dia trabalhado.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="mt-7 grid gap-4 border-t border-base-600/50 pt-6 sm:grid-cols-2">
               <div>
                 <p className="label">Projeção de fechamento</p>

@@ -1,5 +1,6 @@
 import type { SellerRow } from "@/lib/data/months";
 import { decimal, integer, money } from "@/lib/format";
+import { LEVEL_LABEL } from "@/lib/levels";
 import { LevelBadge } from "./LevelBadge";
 import { NotaAtendimento } from "./NotaAtendimento";
 
@@ -82,6 +83,24 @@ export function RankingList({
 
               <LevelBadge level={row.level.current} size="sm" />
             </div>
+
+            {/* Quanto falta por dia é o número que a vendedora usa hoje; a
+                meta do mês sozinha não diz o que fazer nesta segunda-feira. */}
+            {row.ritmo.faltaPorDia != null && row.level.next && (
+              <p className="num mt-2.5 text-sm text-creme-500">
+                faltam{" "}
+                <strong className="font-semibold text-coral-300">{money(row.ritmo.faltaPorDia)}</strong> por
+                dia para o {LEVEL_LABEL[row.level.next]}
+                <span className="text-creme-700">
+                  {" "}
+                  · {integer(row.ritmo.diasRestantes)}{" "}
+                  {row.ritmo.diasRestantes === 1 ? "dia restante" : "dias restantes"}
+                </span>
+                {row.ritmo.mediaDiaria != null && (
+                  <span className="text-creme-700"> · vem fazendo {money(row.ritmo.mediaDiaria)}/dia</span>
+                )}
+              </p>
+            )}
 
             {/* Observação do mês: é aqui que se explica, por exemplo, que o
                 mês soma o período de experiência com o de carteira assinada. */}

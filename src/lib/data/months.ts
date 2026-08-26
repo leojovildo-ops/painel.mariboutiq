@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { aplicarNivelAjustado, computeLevel, type GoalLevelName, type LevelProgress } from "@/lib/levels";
 import { mediaDaLoja } from "@/lib/nps";
+import { calcularRitmo, type Ritmo } from "@/lib/ritmo";
 
 /** Prisma devolve Decimal; as telas trabalham com number | null ("sem dado"). */
 function toNumber(value: Prisma.Decimal | null): number | null {
@@ -35,6 +36,8 @@ export interface SellerRow {
   npsScore: number | null;
   /** Quantas respostas da pesquisa geraram a nota. */
   npsResponses: number | null;
+  /** Média por dia e quanto falta por dia para a próxima meta. */
+  ritmo: Ritmo;
   editedAt: Date | null;
   level: LevelProgress;
   position: number;
@@ -52,6 +55,8 @@ export interface StoreRow {
   level: LevelProgress;
   /** Nota de atendimento da loja no mês, de 0 a 10. */
   npsScore: number | null;
+  /** Média por dia e quanto falta por dia para a próxima meta. */
+  ritmo: Ritmo;
   /** true quando a nota veio da média das vendedoras, e não digitada à mão. */
   npsCalculado: boolean;
   npsResponses: number | null;
@@ -87,6 +92,13 @@ export async function getSellerRanking(periodId: string): Promise<SellerRow[]> {
     .filter((s) => s.seller != null)
     .map((s, index) => {
       const revenue = Number(s.revenue);
+      const level = aplicarNivelAjustado(
+        computeLevel(
+          revenue,
+          s.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+        ),
+        s.levelOverride
+      );
       return {
         sellerId: s.seller!.id,
         name: s.seller!.name,
@@ -103,13 +115,13 @@ export async function getSellerRanking(periodId: string): Promise<SellerRow[]> {
         npsScore: toNumber(s.npsScore),
         npsResponses: s.npsResponses,
         editedAt: s.editedAt,
-        level: aplicarNivelAjustado(
-          computeLevel(
-            revenue,
-            s.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
-          ),
-          s.levelOverride
-        ),
+        level,
+        ritmo: calcularRitmo({
+          revenue,
+          workingDays: s.workingDays,
+          workedDays: s.workedDays,
+          nextTarget: level.nextTarget
+        }),
         position: index + 1
       };
     });
@@ -137,6 +149,14 @@ export async function getStoreMonth(periodId: string): Promise<StoreRow | null> 
   }
 
   const revenue = Number(stats.revenue);
+  const level = aplicarNivelAjustado(
+    computeLevel(
+      revenue,
+      stats.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
+    ),
+    stats.levelOverride
+  );
+
   return {
     revenue,
     salesCount: stats.salesCount,
@@ -146,13 +166,13 @@ export async function getStoreMonth(periodId: string): Promise<StoreRow | null> 
     projection: toNumber(stats.projection),
     workingDays: stats.workingDays,
     workedDays: stats.workedDays,
-    level: aplicarNivelAjustado(
-      computeLevel(
-        revenue,
-        stats.goals.map((g) => ({ level: g.level, target: Number(g.target) }))
-      ),
-      stats.levelOverride
-    ),
+    level,
+    ritmo: calcularRitmo({
+      revenue,
+      workingDays: stats.workingDays,
+      workedDays: stats.workedDays,
+      nextTarget: level.nextTarget
+    }),
     npsScore,
     npsCalculado,
     npsResponses: stats.npsResponses
