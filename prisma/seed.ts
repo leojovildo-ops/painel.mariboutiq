@@ -12,10 +12,14 @@ async function main() {
   const password = process.env.SEED_ADMIN_PASSWORD || "TrocarSenha123!";
   const name = process.env.SEED_ADMIN_NAME || "Administrador";
 
+  // A senha entra tambem no update: sem isso, rodar o seed de novo mantinha em
+  // silencio o hash antigo, e SEED_ADMIN_PASSWORD deixava de valer para entrar.
+  const passwordHash = await bcrypt.hash(password, 10);
+
   const user = await prisma.user.upsert({
     where: { email },
-    update: { role: "ADMIN", active: true },
-    create: { email, name, role: "ADMIN", active: true, passwordHash: await bcrypt.hash(password, 10) }
+    update: { role: "ADMIN", active: true, passwordHash },
+    create: { email, name, role: "ADMIN", active: true, passwordHash }
   });
 
   console.log(`Administrador pronto: ${user.email}`);
