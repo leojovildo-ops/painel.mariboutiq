@@ -20,6 +20,14 @@ function formatarAtualizacao(iso: string): string {
   return dia;
 }
 
+/** "24/08 às 16:23" — no topo do celular a data vem junto da hora, sempre. */
+function dataEHora(iso: string): string {
+  const data = new Date(iso);
+  const dia = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(data);
+  const hora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(data);
+  return `${dia} às ${hora}`;
+}
+
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN: "Administrador",
   SUPERVISORA: "Supervisora",
@@ -110,15 +118,23 @@ export function Shell({
 
   return (
     <div className="min-h-dvh lg:flex">
-      {/* Barra do topo — só no celular/tablet estreito. */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-base-600/60 bg-base/90 px-4 py-3 backdrop-blur lg:hidden">
-        <Wordmark compact />
-        {/* No celular a navegação inteira mora aqui dentro: o botão é o único
-            caminho para as páginas, então precisa de rótulo acessível mesmo
-            sendo só um ícone. */}
+      {/* Barra do topo — só no celular/tablet estreito. Duas linhas: a marca e
+          a data da última atualização em cima, o botão do menu embaixo, à
+          esquerda, onde o polegar alcança. */}
+      <header className="sticky top-0 z-30 border-b border-base-600/60 bg-base/90 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="flex items-start justify-between gap-3">
+          <Wordmark compact />
+          {atualizadoEm && (
+            <p className="pt-0.5 text-right text-xs leading-tight text-creme-700">
+              <span className="block">Atualizado em</span>
+              <span className="num">{dataEHora(atualizadoEm)}</span>
+            </p>
+          )}
+        </div>
+
         <button
           type="button"
-          className="btn-secondary px-3 py-2"
+          className="btn-secondary mt-3 px-3 py-2"
           onClick={() => setMenuOpen((open) => !open)}
           aria-expanded={menuOpen}
           aria-controls="menu-principal"
@@ -188,7 +204,7 @@ export function Shell({
         <p className="font-display text-xl font-bold text-creme sm:text-2xl">
           {greeting}
           {atualizadoEm && (
-            <span className="ml-2 font-sans text-sm font-normal text-creme-700">
+            <span className="ml-2 hidden font-sans text-sm font-normal text-creme-700 lg:inline">
               (dados de {formatarAtualizacao(atualizadoEm)})
             </span>
           )}
