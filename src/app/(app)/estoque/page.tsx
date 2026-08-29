@@ -7,6 +7,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Observacoes } from "@/components/financeiro/Observacoes";
 import { ListaDeItens } from "@/components/estoque/ListaDeItens";
 import { CategoriasBar } from "@/components/estoque/CategoriasBar";
+import { AvisoDeAtualizacao } from "@/components/estoque/AvisoDeAtualizacao";
+import { avisoDeEstoque } from "@/lib/data/estoqueAviso";
 import type { Observacao } from "@/lib/finance/insights";
 
 export const metadata: Metadata = { title: "Estoque · Painel Mariboutique 360" };
@@ -17,6 +19,7 @@ const data = (d: Date) => new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).
 export default async function EstoquePage() {
   await requireAdmin();
   const r = await getResumoEstoque();
+  const aviso = await avisoDeEstoque();
 
   if (!r.temDados) {
     return (
@@ -101,6 +104,8 @@ export default async function EstoquePage() {
 
   return (
     <div className="space-y-7">
+      <AvisoDeAtualizacao aviso={aviso} />
+
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-creme sm:text-3xl">Estoque</h1>

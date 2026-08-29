@@ -2,15 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiUser } from "@/lib/rbac";
 import { forbidden, handleError, jsonError, unauthorized } from "@/lib/apiError";
-import { baixarArquivo } from "@/lib/google/drive";
-import { criarPreviaDeDespesas, criarPreviaDeVendas } from "@/lib/import/previas";
-import { parseSurvey } from "@/lib/xlsx/parseSurvey";
-import { applySurvey } from "@/lib/import/applySurvey";
-import { parseStock } from "@/lib/xlsx/parseStock";
-import { applyStock } from "@/lib/import/applyStock";
-import { parseRelatorioVendas } from "@/lib/xlsx/parseRelatorioVendas";
-import { parseHistorico } from "@/lib/xlsx/parseHistorico";
-import { applyHistorico } from "@/lib/import/applyHistorico";
+import { baixarArquivo, nomeParaImportar } from "@/lib/google/drive";
+import { importarConteudo } from "@/lib/import/importarConteudo";
 
 export const runtime = "nodejs";
 
@@ -26,6 +19,9 @@ const schema = z.object({
  * como no upload manual — o Drive só troca de onde vem o arquivo, não o
  * cuidado antes de gravar. A pesquisa é gravada direto: ela só atualiza médias
  * de meses que já existem, sem criar nem apagar nada.
+ *
+ * O robô diário (/api/cron/drive) usa o mesmo caminho, só que confirmando
+ * vendas e despesas sozinho.
  */
 export async function POST(request: Request) {
   try {
@@ -36,82 +32,11 @@ export async function POST(request: Request) {
     const { fileId, nome, nativa, tipo } = schema.parse(await request.json());
     if (tipo === "DESPESAS" && !user.canViewFinance) return forbidden();
 
-    // Planilha nativa do Google sai como .xlsx na exportação.
-    const nomeArquivo = nativa && !/\.xlsx?$/i.test(nome) ? `${nome}.xlsx` : nome;
     const buffer = await baixarArquivo(fileId, nativa);
+    const { erro, resposta } = await importarConteudo(buffer, nomeParaImportar(nome, nativa), tipo, user.id);
 
-    if (tipo === "VENDAS") {
-      const resultado = await criarPreviaDeVendas(buffer, nomeArquivo, user.id);
-      if (resultado.erro) return jsonError(resultado.erro);
-      return NextResponse.json({ tipo, previa: resultado.previa });
-    }
-
-    if (tipo === "DESPESAS") {
-      const resultado = await criarPreviaDeDespesas(buffer, nomeArquivo, user.id);
-      if (resultado.erro) return jsonError(resultado.erro);
-      return NextResponse.json({ tipo, previa: resultado.previa });
-    }
-
-    if (tipo === "ESTOQUE") {
-      const parsed = parseStock(buffer);
-      if (parsed.itens.length === 0) {
-        return jsonError(parsed.warnings.join(" ") || "Nenhum produto encontrado no arquivo.");
-      }
-      const resultado = await applyStock({
-        itens: parsed.itens,
-        // O arquivo só de produtos não traz vendas; nesse caso as vendas já
-        // gravadas continuam valendo.
-        vendas: parsed.vendas.length > 0 ? parsed.vendas : undefined,
-        periodo: parsed.periodo,
-        fileName: nomeArquivo
-      });
-      return NextResponse.json({ tipo, estoque: { ...resultado, warnings: parsed.warnings } });
-    }
-
-    if (tipo === "ESTOQUE_VENDAS") {
-      const parsed = parseRelatorioVendas(buffer);
-      if (parsed.vendas.length === 0) {
-        return jsonError(parsed.warnings.join(" ") || "Nenhum item de venda foi reconhecido.");
-      }
-      const resultado = await applyStock({
-        vendas: parsed.vendas,
-        periodo: parsed.periodo,
-        fileName: nomeArquivo
-      });
-      return NextResponse.json({
-        tipo,
-        estoque: {
-          ...resultado,
-          pedidos: parsed.pedidos,
-          devolucoes: parsed.devolucoes,
-          warnings: parsed.warnings
-        }
-      });
-    }
-
-    if (tipo === "HISTORICO") {
-      const parsed = parseHistorico(buffer);
-      if (parsed.meses.length === 0) {
-        return jsonError(parsed.warnings.join(" ") || "Nenhum ano encontrado no arquivo.");
-      }
-      const resultado = await applyHistorico(parsed);
-      return NextResponse.json({ tipo, historico: resultado });
-    }
-
-    const parsed = parseSurvey(buffer, nomeArquivo);
-    if (parsed.totalRespostas === 0) {
-      return jsonError(parsed.warnings.join(" ") || "Nenhuma resposta válida encontrada.");
-    }
-    const resultado = await applySurvey(parsed);
-    return NextResponse.json({
-      tipo,
-      pesquisa: {
-        totalRespostas: parsed.totalRespostas,
-        vendedorasAtualizadas: resultado.vendedorasAtualizadas,
-        mesesDaLoja: resultado.mesesDaLoja,
-        warnings: [...parsed.warnings, ...resultado.avisos]
-      }
-    });
+    if (erro || !resposta) return jsonError(erro ?? "Não foi possível importar este arquivo.");
+    return NextResponse.json(resposta);
   } catch (error) {
     return handleError(error);
   }

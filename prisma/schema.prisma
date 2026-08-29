@@ -360,6 +360,26 @@ model StockSnapshot {
   @@map("stock_snapshots")
 }
 
+/// O que o robo diario ja trouxe de cada arquivo do Drive.
+///
+/// Guarda o modifiedTime da ultima importacao que rodou: enquanto o arquivo
+/// nao for mexido de novo no Drive, ele e pulado. Tentativas que falharam
+/// tambem sao gravadas, senao um arquivo quebrado seria rebaixado e
+/// reprocessado todo dia — e, quando alguem corrige a planilha, o proprio
+/// modifiedTime muda e ela volta para a fila sozinha.
+model DriveSync {
+  fileId       String   @id
+  fileName     String
+  tipo         String
+  modifiedTime DateTime
+  syncedAt     DateTime @updatedAt
+  ok           Boolean  @default(true)
+  /// Resumo do que entrou, ou a mensagem do erro.
+  detail       String?
+
+  @@map("drive_syncs")
+}
+
 /// Leitura de caixa do mes, feita a mao fora do sistema e guardada aqui.
 ///
 /// Diferente das outras telas, esta NAO recalcula nada: o texto e o status

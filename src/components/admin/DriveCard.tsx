@@ -50,6 +50,7 @@ export function DriveCard() {
   const [configurado, setConfigurado] = useState(true);
   const [carregando, setCarregando] = useState(false);
   const [trazendo, setTrazendo] = useState<string | null>(null);
+  const [sincronizando, setSincronizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [previaVendas, setPreviaVendas] = useState<PreviaVendasDados | null>(null);
@@ -72,6 +73,37 @@ export function DriveCard() {
     setConfigurado(data.configurado);
     setArquivos(data.arquivos);
     setCarregando(false);
+  }
+
+  /** O mesmo serviço do robô diário, disparado na mão. */
+  async function sincronizar() {
+    setSincronizando(true);
+    setErro(null);
+    setOk(null);
+
+    const res = await fetch("/api/cron/drive");
+    const data = await res.json();
+
+    if (!res.ok) {
+      setErro(data.error ?? "Não foi possível sincronizar com o Drive.");
+      setSincronizando(false);
+      return;
+    }
+
+    const falhas = (data.importados ?? []).filter((i: { situacao: string }) => i.situacao === "erro");
+    const entraram = (data.importados ?? []).filter((i: { situacao: string }) => i.situacao !== "erro");
+
+    setOk(
+      entraram.length === 0 && falhas.length === 0
+        ? "Nada mudou no Drive desde a última importação."
+        : `${entraram.length} planilha(s) importada(s).${falhas.length > 0 ? ` ${falhas.length} falhou/falharam.` : ""}`
+    );
+    if (falhas.length > 0) {
+      setErro(falhas.map((f: { nome: string; detalhe: string }) => `${f.nome}: ${f.detalhe}`).join(" "));
+    }
+
+    setSincronizando(false);
+    await atualizar();
   }
 
   async function trazer(arquivo: Arquivo, tipo: Exclude<Tipo, "DESCONHECIDO">) {
@@ -125,13 +157,18 @@ export function DriveCard() {
         <div>
           <h2 className="font-display text-xl font-bold text-creme">Planilhas no Google Drive</h2>
           <p className="mt-1 text-sm text-creme-500">
-            Lê a pasta da loja no Drive. Vendas e despesas passam pela mesma conferência do upload manual
-            antes de valer.
+            Lê a pasta da loja no Drive. Todo dia de manhã, o que foi alterado por lá entra sozinho no
+            painel; trazer um arquivo na mão aqui embaixo passa pela conferência de sempre.
           </p>
         </div>
-        <button type="button" className="btn-primary" onClick={atualizar} disabled={carregando}>
-          {carregando ? "Buscando…" : "Atualizar do Drive"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn-secondary" onClick={atualizar} disabled={carregando || sincronizando}>
+            {carregando ? "Buscando…" : "Atualizar lista"}
+          </button>
+          <button type="button" className="btn-primary" onClick={sincronizar} disabled={sincronizando || carregando}>
+            {sincronizando ? "Sincronizando…" : "Sincronizar agora"}
+          </button>
+        </div>
       </div>
 
       {!configurado && (

@@ -12,6 +12,8 @@ import { anosComPeriodo, getSaldosDoAno, listarContas } from "@/lib/data/saldos"
 import { EditStatsCard } from "@/components/admin/EditStatsCard";
 import { UsersCard } from "@/components/admin/UsersCard";
 import { MonthSelector } from "@/components/ui/MonthSelector";
+import { AvisoDeAtualizacao } from "@/components/estoque/AvisoDeAtualizacao";
+import { avisoDeEstoque } from "@/lib/data/estoqueAviso";
 
 export const metadata: Metadata = { title: "Administração · Painel Mariboutique 360" };
 export const dynamic = "force-dynamic";
@@ -19,6 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage({ searchParams }: { searchParams: { mes?: string } }) {
   const admin = await requireAdmin();
 
+  const estoque = await avisoDeEstoque();
   const periods = await listPeriods();
   const period = resolvePeriod(periods, searchParams.mes);
 
@@ -48,6 +51,8 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
           Importação das planilhas, correção de números e acessos da equipe.
         </p>
       </header>
+
+      <AvisoDeAtualizacao aviso={estoque} />
 
       <DriveCard />
 

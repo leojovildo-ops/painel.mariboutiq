@@ -92,6 +92,11 @@ export async function listarArquivos(): Promise<ArquivoDoDrive[]> {
     }));
 }
 
+/** Planilha nativa do Google sai como .xlsx na exportacao. */
+export function nomeParaImportar(nome: string, nativa: boolean): string {
+  return nativa && !/\.xlsx?$/i.test(nome) ? `${nome}.xlsx` : nome;
+}
+
 /** Baixa o arquivo. Planilha nativa do Google sai exportada como .xlsx. */
 export async function baixarArquivo(id: string, nativa: boolean): Promise<Buffer> {
   const token = await obterAccessToken();
