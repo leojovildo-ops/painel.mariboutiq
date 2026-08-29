@@ -25,9 +25,9 @@ export interface PreviaVendasDados {
 const ANOS = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 2 + i);
 
 /**
- * Tela de conferência da planilha de vendas, usada tanto pelo upload manual
- * quanto pela leitura do Drive: as duas portas de entrada mostram os mesmos
- * avisos antes de gravar.
+ * Tela de conferência da planilha de vendas, usada quando alguém traz um
+ * arquivo do Drive na mão: o robô diário grava sem passar por aqui, então
+ * este é o caminho de quem quer ver os avisos antes.
  */
 export function PreviaVendas({
   previa,

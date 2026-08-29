@@ -130,7 +130,7 @@ function NewUserForm({ sellers, onDone }: { sellers: SellerRow[]; onDone: () => 
 
       {form.role === "VENDEDORA" && sellers.length === 0 && (
         <p className="mt-3 text-sm text-nivel-ouro">
-          Importe a planilha de um mês antes de criar logins de vendedora — as vendedoras vêm das abas da planilha.
+          Traga a planilha de um mês do Drive antes de criar logins de vendedora — as vendedoras vêm das abas da planilha.
         </p>
       )}
 

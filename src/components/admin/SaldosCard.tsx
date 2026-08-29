@@ -87,7 +87,7 @@ export function SaldosCard({ meses, contas }: { meses: MesDeSaldos[]; contas: Co
 
       {meses.length === 0 && (
         <p className="mt-6 text-sm text-creme-700">
-          Nenhum mês registrado ainda. Importe uma planilha de vendas ou de despesas primeiro.
+          Nenhum mês registrado ainda. Coloque uma planilha de vendas ou de despesas na pasta do Drive primeiro.
         </p>
       )}
     </section>

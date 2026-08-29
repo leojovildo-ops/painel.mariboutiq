@@ -25,7 +25,7 @@ export function SaldosDoMes({
   mes: MesDeSaldos;
   contas: Conta[];
   /**
-   * O lançamento fica só na Administração, junto dos uploads das planilhas.
+   * O lançamento fica só na Administração, junto das planilhas do Drive.
    * A tela do Financeiro é de consulta e apresentação: sem botão de editar,
    * ninguém apaga um saldo sem querer no meio de uma reunião.
    */

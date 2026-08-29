@@ -23,7 +23,7 @@ export default async function ResultadoAnoPage({ searchParams }: { searchParams:
       <div className="card p-8 text-center">
         <h1 className="font-display text-2xl font-bold text-creme">Sem dados financeiros ainda</h1>
         <Link href="/admin" className="btn-primary mt-6">
-          Importar a planilha de despesas
+          Ver as planilhas do Drive
         </Link>
       </div>
     );

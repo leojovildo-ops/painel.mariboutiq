@@ -93,7 +93,7 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
 
   return (
     <div className="border-t border-base-600/60 bg-base-700/30 p-4">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Field label="Faturamento" value={form.revenue} onChange={(v) => setForm({ ...form, revenue: v })} />
         <Field label="Vendas" value={form.salesCount} onChange={(v) => setForm({ ...form, salesCount: v })} />
         <Field label="Peças" value={form.pieces} onChange={(v) => setForm({ ...form, pieces: v })} />
@@ -144,7 +144,7 @@ function RowEditor({ row, onDone }: { row: EditableRow; onDone: () => void }) {
 
       {error && <p className="mt-3 text-sm text-coral-300">{error}</p>}
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <button type="button" className="btn-primary" onClick={save} disabled={busy}>
           {busy ? "Salvando…" : "Salvar correção"}
         </button>
@@ -184,7 +184,7 @@ export function EditStatsCard({ rows }: { rows: EditableRow[] }) {
               </div>
               <button
                 type="button"
-                className="btn-secondary"
+                className="btn-secondary w-full sm:w-auto"
                 onClick={() => setOpenId(openId === row.id ? null : row.id)}
               >
                 {openId === row.id ? "Fechar" : "Editar"}

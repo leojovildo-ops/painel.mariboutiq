@@ -102,7 +102,7 @@ export default async function ContasPage({ searchParams }: { searchParams: { ano
           ))}
         </ul>
         <p className="mt-3 text-xs text-creme-700">
-          O lançamento dos saldos fica em Administração, junto dos uploads das planilhas — aqui é só
+          O lançamento dos saldos fica em Administração, junto das planilhas do Drive — aqui é só
           consulta, para ninguém apagar um valor sem querer.
         </p>
       </div>

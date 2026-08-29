@@ -3,9 +3,6 @@ import { requireAdmin } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { listPeriods, resolvePeriod } from "@/lib/data/months";
 import { periodLabel } from "@/lib/format";
-import { UploadCard } from "@/components/admin/UploadCard";
-import { UploadDespesasCard } from "@/components/admin/UploadDespesasCard";
-import { UploadPesquisaCard } from "@/components/admin/UploadPesquisaCard";
 import { SaldosCard } from "@/components/admin/SaldosCard";
 import { DriveCard } from "@/components/admin/DriveCard";
 import { anosComPeriodo, getSaldosDoAno, listarContas } from "@/lib/data/saldos";
@@ -25,7 +22,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
   const periods = await listPeriods();
   const period = resolvePeriod(periods, searchParams.mes);
 
-  // Saldos das contas: o lançamento fica aqui, junto dos uploads, e a tela do
+  // Saldos das contas: o lançamento fica aqui, junto do Drive, e a tela do
   // Financeiro mostra o resultado sem botão de editar.
   const anos = admin.canViewFinance ? await anosComPeriodo() : [];
   const contas = admin.canViewFinance ? (await listarContas()).filter((c) => c.active) : [];
@@ -48,19 +45,14 @@ export default async function AdminPage({ searchParams }: { searchParams: { mes?
       <header>
         <h1 className="font-display text-2xl font-bold text-creme sm:text-3xl">Administração</h1>
         <p className="mt-1 text-sm text-creme-500">
-          Importação das planilhas, correção de números e acessos da equipe.
+          As planilhas do Drive entram sozinhas todo dia. Aqui ficam a correção dos números e os
+          acessos da equipe.
         </p>
       </header>
 
       <AvisoDeAtualizacao aviso={estoque} />
 
       <DriveCard />
-
-      <UploadCard />
-
-      <UploadPesquisaCard />
-
-      {admin.canViewFinance && <UploadDespesasCard />}
 
       {admin.canViewFinance && contas.length > 0 && <SaldosCard meses={mesesDeSaldos} contas={contas} />}
 

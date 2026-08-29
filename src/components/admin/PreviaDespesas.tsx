@@ -21,7 +21,7 @@ export interface PreviaDespesasDados {
 
 const ANOS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
-/** Conferência da planilha de despesas, para o upload manual e para o Drive. */
+/** Conferência da planilha de despesas trazida na mão pelo card do Drive. */
 export function PreviaDespesas({
   previa,
   onConcluido,
