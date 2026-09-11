@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
-import { marca, ehDemonstracao } from "@/lib/marca";
+import { marca, ehDemonstracao, tema } from "@/lib/marca";
+
+const corDeFundo = tema === "claro" ? "#FCFAF9" : ehDemonstracao ? "#090C11" : "#160F0D";
 
 /**
  * Manifesto do app. É o que permite instalar o painel na tela de início do
@@ -17,8 +19,10 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: ehDemonstracao ? "#090C11" : "#160F0D",
-    theme_color: ehDemonstracao ? "#090C11" : "#160F0D",
+    // Cor da tela de abertura na instalação: tem de bater com o fundo do
+    // painel, senão o app pisca escuro antes de abrir claro.
+    background_color: corDeFundo,
+    theme_color: corDeFundo,
     icons: ehDemonstracao
       ? [
           { src: "/icone-demo-192.png", sizes: "192x192", type: "image/png" },
