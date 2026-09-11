@@ -24,40 +24,45 @@ import type { ParsedExpensesWorkbook } from "@/lib/xlsx/parseExpensesWorkbook";
 export type TipoImportavel = Exclude<TipoDeArquivo, "DESCONHECIDO">;
 
 export interface ResultadoDaImportacao {
-  /** Mensagem para quem clicou; nada é gravado quando ela vem preenchida. */
+  /** Mensagem do que impediu a gravação; quando vem preenchida, nada entrou. */
   erro?: string;
-  /** Corpo devolvido pela rota, no formato que cada tela já espera. */
-  resposta?: Record<string, unknown>;
-  /** Uma linha contando o que entrou, para o histórico do robô. */
+  /** Uma linha contando o que entrou. */
   resumo?: string;
-  /** Prévia criada mas ainda sem gravar: falta o mês ou o ano no arquivo. */
-  pendente?: boolean;
+  /**
+   * Ressalvas da leitura: nome parecido com o de outra vendedora, aba
+   * ignorada, mês no futuro. Não impedem a gravação, mas viram notificação
+   * na Administração — é assim que um erro na planilha chega a quem pode
+   * corrigir, já que ninguém mais confere antes de gravar.
+   */
+  avisos: string[];
 }
 
 /**
- * `confirmarSozinho` grava vendas e despesas sem passar pela tela de
- * conferência. É o que o robô diário usa; o clique manual continua parando na
- * prévia, que é onde os avisos de nome parecido e de substituição aparecem.
+ * Lê e grava, sem tela de conferência no meio: planilha alterada no Drive
+ * entra direto no painel. O que antes era conferido a olho agora sai como
+ * aviso — ver `avisos`.
  */
 export async function importarConteudo(
   buffer: Buffer,
   nomeArquivo: string,
   tipo: TipoImportavel,
-  userId: string,
-  { confirmarSozinho = false }: { confirmarSozinho?: boolean } = {}
+  userId: string
 ): Promise<ResultadoDaImportacao> {
   if (tipo === "VENDAS") {
     const { erro, previa } = await criarPreviaDeVendas(buffer, nomeArquivo, userId);
-    if (erro || !previa) return { erro };
-    if (!confirmarSozinho) return { resposta: { tipo, previa } };
+    if (erro || !previa) return { erro, avisos: [] };
 
     // Sem mês e ano não dá para saber que período seria substituído, e chutar
-    // apagaria os números de outro mês. Fica de prévia esperando um clique.
+    // apagaria os números de outro mês. Aqui vira erro: é o tipo de coisa que
+    // se resolve renomeando a planilha no Drive.
     if (!previa.year || !previa.month) {
+      await prisma.importBatch.update({
+        where: { id: previa.batchId },
+        data: { status: "DISCARDED" }
+      });
       return {
-        resposta: { tipo, previa },
-        pendente: true,
-        resumo: `${nomeArquivo}: não deu para descobrir o mês pelo arquivo; a prévia ficou aguardando confirmação na Administração.`
+        erro: "Não deu para descobrir o mês e o ano pelo arquivo. Renomeie a planilha no Drive (ex.: \"JULHO 2026\") e ela entra na próxima leitura.",
+        avisos: previa.warnings
       };
     }
 
@@ -69,21 +74,23 @@ export async function importarConteudo(
     });
 
     return {
-      resposta: { tipo, previa },
-      resumo: `${previa.month}/${previa.year}: ${previa.sellers.length} vendedora(s) gravada(s).`
+      resumo: `${previa.month}/${previa.year}: ${previa.sellers.length} vendedora(s) gravada(s).`,
+      avisos: previa.warnings
     };
   }
 
   if (tipo === "DESPESAS") {
     const { erro, previa } = await criarPreviaDeDespesas(buffer, nomeArquivo, userId);
-    if (erro || !previa) return { erro };
-    if (!confirmarSozinho) return { resposta: { tipo, previa } };
+    if (erro || !previa) return { erro, avisos: [] };
 
     if (!previa.year) {
+      await prisma.importBatch.update({
+        where: { id: previa.batchId },
+        data: { status: "DISCARDED" }
+      });
       return {
-        resposta: { tipo, previa },
-        pendente: true,
-        resumo: `${nomeArquivo}: não deu para descobrir o ano pelo arquivo; a prévia ficou aguardando confirmação na Administração.`
+        erro: "Não deu para descobrir o ano pelo arquivo. Renomeie a planilha no Drive (ex.: \"DESPESAS 2026\") e ela entra na próxima leitura.",
+        avisos: previa.warnings
       };
     }
 
@@ -95,17 +102,17 @@ export async function importarConteudo(
     });
 
     return {
-      resposta: { tipo, previa },
-      resumo: `Despesas de ${previa.year}: ${previa.meses.length} mês(es) gravado(s).`
+      resumo: `Despesas de ${previa.year}: ${previa.meses.length} mês(es) gravado(s).`,
+      avisos: previa.warnings
     };
   }
 
   if (tipo === "ESTOQUE") {
     const parsed = parseStock(buffer);
     if (parsed.itens.length === 0) {
-      return { erro: parsed.warnings.join(" ") || "Nenhum produto encontrado no arquivo." };
+      return { erro: parsed.warnings.join(" ") || "Nenhum produto encontrado no arquivo.", avisos: [] };
     }
-    const resultado = await applyStock({
+    await applyStock({
       itens: parsed.itens,
       // O arquivo só de produtos não traz vendas; nesse caso as vendas já
       // gravadas continuam valendo.
@@ -113,63 +120,40 @@ export async function importarConteudo(
       periodo: parsed.periodo,
       fileName: nomeArquivo
     });
-    return {
-      resposta: { tipo, estoque: { ...resultado, warnings: parsed.warnings } },
-      resumo: `${parsed.itens.length} produto(s) no estoque.`
-    };
+    return { resumo: `${parsed.itens.length} produto(s) no estoque.`, avisos: parsed.warnings };
   }
 
   if (tipo === "ESTOQUE_VENDAS") {
     const parsed = parseRelatorioVendas(buffer);
     if (parsed.vendas.length === 0) {
-      return { erro: parsed.warnings.join(" ") || "Nenhum item de venda foi reconhecido." };
+      return { erro: parsed.warnings.join(" ") || "Nenhum item de venda foi reconhecido.", avisos: [] };
     }
-    const resultado = await applyStock({
-      vendas: parsed.vendas,
-      periodo: parsed.periodo,
-      fileName: nomeArquivo
-    });
+    await applyStock({ vendas: parsed.vendas, periodo: parsed.periodo, fileName: nomeArquivo });
     return {
-      resposta: {
-        tipo,
-        estoque: {
-          ...resultado,
-          pedidos: parsed.pedidos,
-          devolucoes: parsed.devolucoes,
-          warnings: parsed.warnings
-        }
-      },
-      resumo: `${parsed.vendas.length} item(ns) vendido(s) em ${parsed.pedidos} pedido(s).`
+      resumo: `${parsed.vendas.length} item(ns) vendido(s) em ${parsed.pedidos} pedido(s), ${parsed.devolucoes} devolução(ões).`,
+      avisos: parsed.warnings
     };
   }
 
   if (tipo === "HISTORICO") {
     const parsed = parseHistorico(buffer);
     if (parsed.meses.length === 0) {
-      return { erro: parsed.warnings.join(" ") || "Nenhum ano encontrado no arquivo." };
+      return { erro: parsed.warnings.join(" ") || "Nenhum ano encontrado no arquivo.", avisos: [] };
     }
     const resultado = await applyHistorico(parsed);
     return {
-      resposta: { tipo, historico: resultado },
-      resumo: `${parsed.meses.length} mês(es) de histórico.`
+      resumo: `${resultado.anos.join(", ")}: ${resultado.criados} mês(es) de histórico criados.`,
+      avisos: parsed.warnings
     };
   }
 
   const parsed = parseSurvey(buffer, nomeArquivo);
   if (parsed.totalRespostas === 0) {
-    return { erro: parsed.warnings.join(" ") || "Nenhuma resposta válida encontrada." };
+    return { erro: parsed.warnings.join(" ") || "Nenhuma resposta válida encontrada.", avisos: [] };
   }
   const resultado = await applySurvey(parsed);
   return {
-    resposta: {
-      tipo,
-      pesquisa: {
-        totalRespostas: parsed.totalRespostas,
-        vendedorasAtualizadas: resultado.vendedorasAtualizadas,
-        mesesDaLoja: resultado.mesesDaLoja,
-        warnings: [...parsed.warnings, ...resultado.avisos]
-      }
-    },
-    resumo: `${parsed.totalRespostas} resposta(s) da pesquisa.`
+    resumo: `${parsed.totalRespostas} resposta(s): ${resultado.vendedorasAtualizadas} nota(s) de vendedora e ${resultado.mesesDaLoja} mês(es) da loja.`,
+    avisos: [...parsed.warnings, ...resultado.avisos]
   };
 }

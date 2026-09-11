@@ -376,6 +376,12 @@ model DriveSync {
   ok           Boolean  @default(true)
   /// Resumo do que entrou, ou a mensagem do erro.
   detail       String?
+  /// Ressalvas da leitura (nome parecido, aba ignorada) que nao impediram a
+  /// gravacao mas merecem um olhar humano.
+  warnings     Json?
+  /// Quando alguem deu por visto o problema deste arquivo. Nulo enquanto o
+  /// aviso ainda estiver pendurado na Administracao.
+  seenAt       DateTime?
 
   @@map("drive_syncs")
 }

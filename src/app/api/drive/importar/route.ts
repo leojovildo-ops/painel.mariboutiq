@@ -15,13 +15,8 @@ const schema = z.object({
 });
 
 /**
- * Traz um arquivo do Drive. Vendas e despesas param na tela de conferência,
- * como no upload manual — o Drive só troca de onde vem o arquivo, não o
- * cuidado antes de gravar. A pesquisa é gravada direto: ela só atualiza médias
- * de meses que já existem, sem criar nem apagar nada.
- *
- * O robô diário (/api/cron/drive) usa o mesmo caminho, só que confirmando
- * vendas e despesas sozinho.
+ * Traz um arquivo do Drive agora, sem esperar a rodada da manhã. Grava direto,
+ * como o robô: quem clica aqui está pedindo a mesma coisa, só que na hora.
  */
 export async function POST(request: Request) {
   try {
@@ -33,10 +28,15 @@ export async function POST(request: Request) {
     if (tipo === "DESPESAS" && !user.canViewFinance) return forbidden();
 
     const buffer = await baixarArquivo(fileId, nativa);
-    const { erro, resposta } = await importarConteudo(buffer, nomeParaImportar(nome, nativa), tipo, user.id);
+    const { erro, resumo, avisos } = await importarConteudo(
+      buffer,
+      nomeParaImportar(nome, nativa),
+      tipo,
+      user.id
+    );
 
-    if (erro || !resposta) return jsonError(erro ?? "Não foi possível importar este arquivo.");
-    return NextResponse.json(resposta);
+    if (erro) return jsonError(erro);
+    return NextResponse.json({ tipo, resumo, avisos });
   } catch (error) {
     return handleError(error);
   }

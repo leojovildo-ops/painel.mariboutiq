@@ -85,12 +85,15 @@ export function Shell({
   greeting,
   canViewFinance,
   atualizadoEm,
+  avisos,
   children
 }: {
   role: Role;
   name: string;
   greeting: string;
   canViewFinance: boolean;
+  /** Avisos da importação automática, mostrados como contador no menu. */
+  avisos: number;
   /** ISO da última importação que valeu, ou null se nada foi importado. */
   atualizadoEm: string | null;
   children: React.ReactNode;
@@ -179,7 +182,7 @@ export function Shell({
             </button>
           </div>
 
-          <Nav role={role} canViewFinance={canViewFinance} onNavigate={() => setMenuOpen(false)} />
+          <Nav role={role} canViewFinance={canViewFinance} avisos={avisos} onNavigate={() => setMenuOpen(false)} />
 
           <div className="mt-8 border-t border-base-600/60 pt-5">
             <Rodape role={role} name={name} />
@@ -193,7 +196,7 @@ export function Shell({
           <Wordmark />
         </div>
 
-        <Nav role={role} canViewFinance={canViewFinance} />
+        <Nav role={role} canViewFinance={canViewFinance} avisos={avisos} />
 
         <div className="absolute bottom-7 left-5 right-5">
           <Rodape role={role} name={name} />

@@ -13,8 +13,9 @@ import { importarConteudo, type TipoImportavel } from "@/lib/import/importarCont
 export interface ResultadoDoArquivo {
   nome: string;
   tipo: string;
-  situacao: "importado" | "aguardando" | "erro";
+  situacao: "importado" | "erro";
   detalhe: string;
+  avisos: string[];
 }
 
 export interface ResultadoDaSincronizacao {
@@ -69,21 +70,21 @@ export async function sincronizarDrive({
     // Um arquivo que falha não pode derrubar a rodada: os outros continuam.
     let situacao: ResultadoDoArquivo["situacao"] = "importado";
     let detalhe: string;
+    let avisos: string[] = [];
     try {
       const buffer = await baixarArquivo(arquivo.id, arquivo.nativa);
       const importado = await importarConteudo(
         buffer,
         nomeParaImportar(arquivo.name, arquivo.nativa),
         arquivo.tipo as TipoImportavel,
-        autor.id,
-        { confirmarSozinho: true }
+        autor.id
       );
 
+      avisos = importado.avisos;
       if (importado.erro) {
         situacao = "erro";
         detalhe = importado.erro;
       } else {
-        situacao = importado.pendente ? "aguardando" : "importado";
         detalhe = importado.resumo ?? "Importado.";
       }
     } catch (error) {
@@ -102,7 +103,11 @@ export async function sincronizarDrive({
         tipo: arquivo.tipo,
         modifiedTime: modificadoEm,
         ok: situacao !== "erro",
-        detail: detalhe.slice(0, 500)
+        detail: detalhe.slice(0, 500),
+        warnings: avisos,
+        // Problema novo volta a pedir atenção, mesmo que o anterior já tivesse
+        // sido dado por visto.
+        seenAt: situacao === "erro" || avisos.length > 0 ? null : new Date()
       },
       create: {
         fileId: arquivo.id,
@@ -110,11 +115,12 @@ export async function sincronizarDrive({
         tipo: arquivo.tipo,
         modifiedTime: modificadoEm,
         ok: situacao !== "erro",
-        detail: detalhe.slice(0, 500)
+        detail: detalhe.slice(0, 500),
+        warnings: avisos
       }
     });
 
-    resultado.importados.push({ nome: arquivo.name, tipo: arquivo.tipo, situacao, detalhe });
+    resultado.importados.push({ nome: arquivo.name, tipo: arquivo.tipo, situacao, detalhe, avisos });
   }
 
   return resultado;

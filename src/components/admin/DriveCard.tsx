@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PreviaVendas, type PreviaVendasDados } from "./PreviaVendas";
-import { PreviaDespesas, type PreviaDespesasDados } from "./PreviaDespesas";
 
 type Tipo =
   | "VENDAS"
@@ -40,9 +38,9 @@ function quando(iso: string): string {
 }
 
 /**
- * Leitura da pasta do Drive. O botão só traz o arquivo: vendas e despesas
- * param na mesma tela de conferência do upload manual, porque o Drive muda de
- * onde vem o arquivo, não o cuidado antes de gravar.
+ * Leitura da pasta do Drive. Nada aqui pede confirmação: a planilha que mudou
+ * entra direto, igual à rodada da manhã. O que a leitura estranhar vira aviso
+ * no topo da Administração, em vez de uma tela de conferência antes.
  */
 export function DriveCard() {
   const router = useRouter();
@@ -53,8 +51,6 @@ export function DriveCard() {
   const [sincronizando, setSincronizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const [previaVendas, setPreviaVendas] = useState<PreviaVendasDados | null>(null);
-  const [previaDespesas, setPreviaDespesas] = useState<PreviaDespesasDados | null>(null);
 
   async function atualizar() {
     setCarregando(true);
@@ -110,8 +106,6 @@ export function DriveCard() {
     setTrazendo(arquivo.id);
     setErro(null);
     setOk(null);
-    setPreviaVendas(null);
-    setPreviaDespesas(null);
 
     const res = await fetch("/api/drive/importar", {
       method: "POST",
@@ -126,29 +120,11 @@ export function DriveCard() {
       return;
     }
 
-    if (data.tipo === "VENDAS") setPreviaVendas(data.previa);
-    else if (data.tipo === "DESPESAS") setPreviaDespesas(data.previa);
-    else if (data.tipo === "ESTOQUE" || data.tipo === "ESTOQUE_VENDAS") {
-      const e = data.estoque;
-      const detalhe = e.pedidos ? ` (${e.pedidos} pedidos, ${e.devolucoes} devoluções)` : "";
-      setOk(`Estoque atualizado: ${e.itens} produtos e ${e.vendas} linhas de venda${detalhe}.`);
-      router.refresh();
-    } else if (data.tipo === "HISTORICO") {
-      const h = data.historico;
-      setOk(
-        `Histórico de ${h.anos.join(", ")}: ${h.criados} mês(es) criados. ${h.preservados.length} mês(es) já tinham detalhe e foram preservados.`
-      );
-      router.refresh();
-    } else {
-      const p = data.pesquisa;
-      setOk(
-        `${p.totalRespostas} respostas lidas · ${p.vendedorasAtualizadas} nota(s) de vendedora e ${p.mesesDaLoja} mês(es) da loja atualizados.`
-      );
-      if (p.warnings.length > 0) setErro(p.warnings.join(" "));
-      router.refresh();
-    }
+    setOk(`${arquivo.name}: ${data.resumo ?? "importado"}`);
+    if (data.avisos?.length > 0) setErro(data.avisos.join(" "));
 
     setTrazendo(null);
+    router.refresh();
   }
 
   return (
@@ -157,8 +133,8 @@ export function DriveCard() {
         <div>
           <h2 className="font-display text-xl font-bold text-creme">Planilhas no Google Drive</h2>
           <p className="mt-1 text-sm text-creme-500">
-            Lê a pasta da loja no Drive. Todo dia de manhã, o que foi alterado por lá entra sozinho no
-            painel; trazer um arquivo na mão aqui embaixo passa pela conferência de sempre.
+            Lê a pasta da loja no Drive. Toda manhã, o que foi alterado por lá entra sozinho no painel
+            — trazer um arquivo aqui embaixo só antecipa isso.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -193,7 +169,7 @@ export function DriveCard() {
         <p className="mt-4 text-sm text-creme-700">Nenhuma planilha encontrada na pasta.</p>
       )}
 
-      {arquivos && arquivos.length > 0 && !previaVendas && !previaDespesas && (
+      {arquivos && arquivos.length > 0 && (
         <ul className="mt-5 overflow-hidden rounded-xl border border-base-600">
           {arquivos.map((arquivo) => (
             <li
@@ -236,29 +212,6 @@ export function DriveCard() {
         </ul>
       )}
 
-      {previaVendas && (
-        <PreviaVendas
-          previa={previaVendas}
-          onConcluido={(mensagem) => {
-            setOk(mensagem);
-            setPreviaVendas(null);
-            router.refresh();
-          }}
-          onDescartado={() => setPreviaVendas(null)}
-        />
-      )}
-
-      {previaDespesas && (
-        <PreviaDespesas
-          previa={previaDespesas}
-          onConcluido={(mensagem) => {
-            setOk(mensagem);
-            setPreviaDespesas(null);
-            router.refresh();
-          }}
-          onDescartado={() => setPreviaDespesas(null)}
-        />
-      )}
     </section>
   );
 }

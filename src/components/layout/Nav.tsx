@@ -30,10 +30,13 @@ const ESTOQUE: NavItem[] = [{ href: "/estoque", label: "Dashboard" }];
 export function Nav({
   role,
   canViewFinance,
+  avisos = 0,
   onNavigate
 }: {
   role: Role;
   canViewFinance: boolean;
+  /** Problemas da importação automática esperando um olhar na Administração. */
+  avisos?: number;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -59,6 +62,14 @@ export function Nav({
                   }`}
                 >
                   {item.label}
+                  {item.href === "/admin" && avisos > 0 && (
+                    <span
+                      className="ml-2 inline-flex min-w-[1.25rem] justify-center rounded-full bg-coral px-1.5 py-0.5 text-xs font-bold text-base"
+                      aria-label={`${avisos} aviso(s) de importação`}
+                    >
+                      {avisos}
+                    </span>
+                  )}
                 </Link>
               </li>
             );
