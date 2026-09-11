@@ -45,7 +45,7 @@ export function EspecieParaCompras({ resumo }: { resumo: ResumoDeEspecie }) {
         <>
           {viagensNoCaixa != null && valorPorViagem != null && (
             <p
-              className={`mt-4 text-lg font-semibold ${daParaViajar ? "text-emerald-300" : "text-nivel-ouro"}`}
+              className={`mt-4 text-lg font-semibold ${daParaViajar ? "text-sucesso-300" : "text-nivel-ouro"}`}
             >
               {daParaViajar ? (
                 <>

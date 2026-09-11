@@ -212,7 +212,7 @@ export function UsersCard({
                   {user.sellerName ? ` · ${user.sellerName}` : ""}
                 </p>
                 {user.canViewFinance && (
-                  <span className="mt-1 inline-block rounded-full border border-emerald-500/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                  <span className="mt-1 inline-block rounded-full border border-sucesso/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sucesso-300">
                     Vê o financeiro
                   </span>
                 )}

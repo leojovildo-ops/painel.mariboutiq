@@ -25,7 +25,7 @@ export function VariacaoDeCaixa({ meses }: { meses: MesDeCaixa[] }) {
               <div className="flex h-20 w-full items-end justify-center">
                 {positivo && (
                   <div
-                    className="w-3/5 rounded-t bg-emerald-400/80"
+                    className="w-3/5 rounded-t bg-sucesso-400/80"
                     style={{ height: `${Math.max(altura, 2)}%` }}
                     title={`${monthName(m.month)}: ${moneyShort(valor)}`}
                   />
@@ -48,7 +48,7 @@ export function VariacaoDeCaixa({ meses }: { meses: MesDeCaixa[] }) {
               <span className="text-[11px] font-semibold text-creme-700">
                 {monthName(m.month).slice(0, 3)}
               </span>
-              <span className={`num text-[11px] ${positivo ? "text-emerald-300" : "text-coral-300"}`}>
+              <span className={`num text-[11px] ${positivo ? "text-sucesso-300" : "text-coral-300"}`}>
                 {moneyShort(valor)}
               </span>
             </div>

@@ -36,9 +36,20 @@ const config: Config = {
           700: "rgb(var(--c-creme-700) / <alpha-value>)"  // texto de apoio
         },
         nivel: {
-          prata: "#CBD1D8",
-          ouro: "#E7B84B",
-          diamante: "#7ED2E6"
+          prata: "rgb(var(--c-nivel-prata) / <alpha-value>)",
+          ouro: "rgb(var(--c-nivel-ouro) / <alpha-value>)",
+          diamante: "rgb(var(--c-nivel-diamante) / <alpha-value>)"
+        },
+        // Verde de "deu certo" e âmbar de "olha isto": também em variáveis,
+        // senão um fundo claro herdaria tons pensados para o escuro.
+        sucesso: {
+          DEFAULT: "rgb(var(--c-sucesso) / <alpha-value>)",
+          400: "rgb(var(--c-sucesso-400) / <alpha-value>)",
+          300: "rgb(var(--c-sucesso-300) / <alpha-value>)" // texto
+        },
+        alerta: {
+          DEFAULT: "rgb(var(--c-alerta) / <alpha-value>)",
+          300: "rgb(var(--c-alerta-300) / <alpha-value>)" // texto
         }
       },
       fontFamily: {

@@ -93,7 +93,7 @@ export function SaldosDoMes({
             <span
               className={`num rounded-full border px-2.5 py-0.5 text-sm font-semibold ${
                 mes.variacao >= 0
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                  ? "border-sucesso/40 bg-sucesso/10 text-sucesso-300"
                   : "border-coral/45 bg-coral/10 text-coral-300"
               }`}
             >

@@ -130,7 +130,7 @@ export default async function ResultadoAnoPage({ searchParams }: { searchParams:
                   <td className="num px-4 py-2.5 text-right text-creme-300">{money(m.expenses)}</td>
                   <td
                     className={`num px-4 py-2.5 text-right font-semibold ${
-                      m.profit != null && m.profit < 0 ? "text-coral-300" : "text-emerald-300"
+                      m.profit != null && m.profit < 0 ? "text-coral-300" : "text-sucesso-300"
                     }`}
                   >
                     {money(m.profit)}
@@ -150,7 +150,7 @@ export default async function ResultadoAnoPage({ searchParams }: { searchParams:
                 <td className="px-6 py-3 text-creme">Total</td>
                 <td className="num px-4 py-3 text-right text-creme">{money(faturamento)}</td>
                 <td className="num px-4 py-3 text-right text-creme">{money(despesas)}</td>
-                <td className={`num px-4 py-3 text-right ${lucro < 0 ? "text-coral-300" : "text-emerald-300"}`}>
+                <td className={`num px-4 py-3 text-right ${lucro < 0 ? "text-coral-300" : "text-sucesso-300"}`}>
                   {money(lucro)}
                 </td>
                 <td className="num px-6 py-3 text-right text-creme">{margem == null ? "—" : percent(margem)}</td>

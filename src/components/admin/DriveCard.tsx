@@ -160,7 +160,7 @@ export function DriveCard() {
       )}
 
       {ok && (
-        <p className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+        <p className="mt-4 rounded-xl border border-sucesso/30 bg-sucesso/10 px-4 py-3 text-sm text-sucesso-300">
           {ok}
         </p>
       )}

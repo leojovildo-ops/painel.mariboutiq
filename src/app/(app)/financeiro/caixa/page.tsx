@@ -12,10 +12,10 @@ export const dynamic = "force-dynamic";
 const ESTILO: Record<StatusDeCaixa, { rotulo: string; borda: string; fundo: string; texto: string; ponto: string }> = {
   POSITIVO: {
     rotulo: "Positivo",
-    borda: "border-emerald-500/30",
-    fundo: "bg-emerald-500/[0.07]",
-    texto: "text-emerald-300",
-    ponto: "bg-emerald-400"
+    borda: "border-sucesso/30",
+    fundo: "bg-sucesso/[0.07]",
+    texto: "text-sucesso-300",
+    ponto: "bg-sucesso-400"
   },
   ATENCAO: {
     rotulo: "Ponto de atenção",
@@ -36,7 +36,7 @@ const ESTILO: Record<StatusDeCaixa, { rotulo: string; borda: string; fundo: stri
 function Valor({ valor }: { valor: number | null }) {
   if (valor == null) return <span className="text-creme-700">—</span>;
   return (
-    <span className={valor >= 0 ? "text-emerald-300" : "text-coral-300"}>
+    <span className={valor >= 0 ? "text-sucesso-300" : "text-coral-300"}>
       {valor >= 0 ? "+" : ""}
       {money(valor)}
     </span>

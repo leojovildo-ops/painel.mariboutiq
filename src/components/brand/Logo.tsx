@@ -1,14 +1,17 @@
 import Image from "next/image";
 import logo from "../../../public/logo-mari-boutique.png";
-import { marca } from "@/lib/marca";
+import logoEscura from "../../../public/logo-mari-boutique-escura.png";
+import { marca, tema } from "@/lib/marca";
 
 /**
  * Logotipo oficial da Mari Boutique, na variação clara.
  *
  * O arquivo do kit da marca é preto sobre branco e sumiria no fundo escuro do
  * painel; a versão creme foi gerada a partir dele por `scripts/gerarLogo.ts`,
- * preservando os traços originais. Como o logotipo já diz "Mari boutique", o
- * texto ao lado se limita a nomear o sistema, sem repetir a marca.
+ * preservando os traços originais. No tema claro o problema se inverte — creme
+ * sobre branco some —, então volta a variação escura. Como o logotipo já diz
+ * "Mari boutique", o texto ao lado se limita a nomear o sistema, sem repetir a
+ * marca.
  */
 export function Logo({ width = 150 }: { width?: number }) {
   // Na demonstração não entra o logotipo da Mari Boutique: fica um monograma
@@ -27,7 +30,7 @@ export function Logo({ width = 150 }: { width?: number }) {
 
   return (
     <Image
-      src={logo}
+      src={tema === "claro" ? logoEscura : logo}
       alt="Mari Boutique"
       width={width}
       height={Math.round((width * 1094) / 2310)}

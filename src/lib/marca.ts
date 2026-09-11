@@ -7,6 +7,14 @@
  */
 export const ehDemonstracao = process.env.NEXT_PUBLIC_DEMO === "1";
 
+/**
+ * Paleta em teste. Vazio = o escuro de sempre; "claro" = o mesmo painel com
+ * fundo branco, para comparar antes de decidir. Vive em variável de ambiente
+ * porque assim um deploy de teste responde diferente da produção sem nenhuma
+ * mudança de código.
+ */
+export const tema = process.env.NEXT_PUBLIC_TEMA === "claro" ? "claro" : null;
+
 export const marca = {
   /** Nome do sistema, no topo e no título da aba. */
   sistema: ehDemonstracao ? "Painel 360" : "Painel Mariboutique 360",

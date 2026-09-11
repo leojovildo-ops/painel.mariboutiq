@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { Providers } from "./providers";
-import { marca, ehDemonstracao } from "@/lib/marca";
+import { marca, ehDemonstracao, tema } from "@/lib/marca";
 import { AvisoDemo } from "@/components/brand/AvisoDemo";
 import "./globals.css";
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: marca.nomeDoApp,
-    statusBarStyle: "black-translucent"
+    statusBarStyle: tema === "claro" ? "default" : "black-translucent"
   },
   icons: {
     icon: ehDemonstracao
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: ehDemonstracao ? "#090C11" : "#160F0D",
+  themeColor: tema === "claro" ? "#FCFAF9" : ehDemonstracao ? "#090C11" : "#160F0D",
   // Sem isto, o conteúdo passa por baixo do notch e da barra inferior do iPhone
   // quando o painel abre em tela cheia.
   viewportFit: "cover",
@@ -47,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      data-tema={ehDemonstracao ? "demo" : undefined}
+      data-tema={tema ?? (ehDemonstracao ? "demo" : undefined)}
       className={`${sans.variable} ${display.variable}`}
     >
       <body>

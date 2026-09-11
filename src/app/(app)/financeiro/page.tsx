@@ -112,7 +112,7 @@ export default async function FinanceiroPage({
         <h2 className="font-display text-lg font-bold text-creme">Faturamento x despesas no ano</h2>
         <p className="mb-5 mt-1 text-sm text-creme-500">
           Acumulado de {ano}: {money(totalAno.faturamento)} faturados, {money(totalAno.despesas)} de despesas,{" "}
-          <strong className={lucroAno < 0 ? "text-coral-300" : "text-emerald-300"}>{money(lucroAno)}</strong> de
+          <strong className={lucroAno < 0 ? "text-coral-300" : "text-sucesso-300"}>{money(lucroAno)}</strong> de
           resultado.
         </p>
         <EvolucaoAno meses={meses} mesAtivo={mes.month} />

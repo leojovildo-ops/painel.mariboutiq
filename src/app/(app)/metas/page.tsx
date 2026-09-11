@@ -106,7 +106,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { mes?
                     por dia útil, nos {integer(store.ritmo.diasRestantes)} dias que restam.
                   </p>
                 ) : (
-                  <p className="text-sm font-semibold text-emerald-300">
+                  <p className="text-sm font-semibold text-sucesso-300">
                     {store.level.next
                       ? "Sem dias úteis restantes no mês."
                       : "Todas as metas do mês já foram batidas."}

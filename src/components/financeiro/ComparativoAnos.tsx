@@ -86,7 +86,7 @@ export function ComparativoAnos({ anos }: { anos: AnoComparado[] }) {
                     ano.variacao == null
                       ? "text-creme-700"
                       : ano.variacao >= 0
-                        ? "text-emerald-300"
+                        ? "text-sucesso-300"
                         : "text-coral-300"
                   }`}
                 >
@@ -97,7 +97,7 @@ export function ComparativoAnos({ anos }: { anos: AnoComparado[] }) {
                     ano.variacaoComparavel == null
                       ? "text-creme-700"
                       : ano.variacaoComparavel >= 0
-                        ? "text-emerald-300"
+                        ? "text-sucesso-300"
                         : "text-coral-300"
                   }`}
                 >

@@ -3,10 +3,10 @@ import type { Observacao, Tom } from "@/lib/finance/insights";
 const ESTILO: Record<Tom, { titulo: string; borda: string; fundo: string; texto: string; ponto: string }> = {
   POSITIVO: {
     titulo: "Positivo",
-    borda: "border-emerald-500/30",
-    fundo: "bg-emerald-500/[0.07]",
-    texto: "text-emerald-300",
-    ponto: "bg-emerald-400"
+    borda: "border-sucesso/30",
+    fundo: "bg-sucesso/[0.07]",
+    texto: "text-sucesso-300",
+    ponto: "bg-sucesso-400"
   },
   ATENCAO: {
     titulo: "Ponto de atenção",

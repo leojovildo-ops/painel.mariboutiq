@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Produtos · Painel Mariboutique 360"
 export const dynamic = "force-dynamic";
 
 const TOM = {
-  bom: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+  bom: "border-sucesso/40 bg-sucesso/10 text-sucesso-300",
   atencao: "border-nivel-ouro/40 bg-nivel-ouro/10 text-nivel-ouro",
   ruim: "border-coral/45 bg-coral/10 text-coral-300",
   neutro: "border-base-600 bg-base-700/40 text-creme-700"
